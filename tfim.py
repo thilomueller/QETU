@@ -39,7 +39,8 @@ class TFIM():
     def Trotterization(
             self,
             delta_t,
-            n = 2
+            n = 2,
+            control_free = False
     ):
         """
             Build the circuit for the second-order Trotter approximation of the TFIM Hamiltonian.
@@ -70,9 +71,23 @@ class TFIM():
             ^---------------------------------------------^
                             repeat n times
 
+                            
+            Build the circuit of the controlled time evolution of the TFIM Hamiltonian.
+
+            [ exp(i*Δt*H)         0       ]  =  [ K * exp(-i*Δt*H) * K         0       ]
+            [     0          exp(-i*Δt*H) ]     [        0                exp(-i*Δt*H) ]
+
+            ───○────────────────────────○───
+             ┌─┴─┐  ┌──────────────┐  ┌─┴─┐ 
+            ─┤ K ├──┤ exp(-i*Δt*H) ├──┤ K ├─
+             └───┘  └──────────────┘  └───┘ 
+
+            K = Y ⊗ Z ⊗ Y ⊗ Z ⊗ Y ⊗ ...
+
             Input:
                 delta_t
                 n
+                control_free
             Output:
                 ciruit of the tortterized Hamiltonian
         """
@@ -108,39 +123,6 @@ class TFIM():
                 circuit.rx(-2*self.g_coupling*delta_t/n, q[j])
             return circuit
         
-
-        q = QuantumRegister(self.nqubits, 'q')
-        circuit = QuantumCircuit(q)
-        for _ in range(n-1):
-            circuit.compose(H_1(), q, inplace=True)
-            circuit.compose(H_2(), q, inplace=True)
-            circuit.compose(H_1(), q, inplace=True)
-
-        return circuit
-    
-
-    def Control_free_Trotter(
-            self,
-            n = 2
-    ):
-        """
-            Build the circuit of the controlled time evolution of the TFIM Hamiltonian
-
-            [ exp(i*Δt*H)         0       ]  =  [ K * exp(-i*Δt*H) * K         0       ]
-            [     0          exp(-i*Δt*H) ]     [        0                exp(-i*Δt*H) ]
-
-            ───○────────────────────────○───
-             ┌─┴─┐  ┌──────────────┐  ┌─┴─┐ 
-            ─┤ K ├──┤ exp(-i*Δt*H) ├──┤ K ├─
-             └───┘  └──────────────┘  └───┘ 
-
-            K = Y ⊗ Z ⊗ Y ⊗ Z ⊗ Y ⊗ ...
-
-            Input:
-                n
-            Output:
-            
-        """
         def K():
             """"
                 Implementation of the Pauli term K that anticommutes with each term in the TFIM Hamiltonian
@@ -165,13 +147,26 @@ class TFIM():
                 else:
                     circuit.cz(anc, q[j], ctrl_state='0')
             return circuit
+        
+        if not control_free:
+            q = QuantumRegister(self.nqubits, 'q')
+            circuit = QuantumCircuit(q)
+            for _ in range(n-1):
+                circuit.compose(H_1(), q, inplace=True)
+                circuit.compose(H_2(), q, inplace=True)
+                circuit.compose(H_1(), q, inplace=True)
+        else:
+            q = QuantumRegister(self.nqubits, 'q')
+            anc = QuantumRegister(1, 'ancilla')
+            circuit = QuantumCircuit(anc, q)
+            for _ in range(n-1):
+                circuit.compose(K(), anc[:] + q[:], inplace=True)
+                circuit.barrier(q)
+                circuit.compose(H_1(), q, inplace=True)
+                circuit.compose(H_2(), q, inplace=True)
+                circuit.compose(H_1(), q, inplace=True)
+                circuit.barrier(q)
+                circuit.compose(K(), anc[:] + q[:], inplace=True)
+            return circuit
 
-        q = QuantumRegister(self.nqubits, 'q')
-        anc = QuantumRegister(1, 'ancilla')
-        circuit = QuantumCircuit(anc, q)
-        circuit.compose(K(), anc[:] + q[:], inplace=True)
-        circuit.barrier(q)
-        circuit.compose(self.Trotterization(n), q, inplace=True)
-        circuit.barrier(q)
-        circuit.compose(K(), anc[:] + q[:], inplace=True)
         return circuit
