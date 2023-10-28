@@ -142,7 +142,7 @@ class TFIM():
             anc = QuantumRegister(1, 'ancilla')
             circuit = QuantumCircuit(anc, q)
             for j in range(self.nqubits):
-                if j % 2 != 0:
+                if j % 2 == 0:
                     circuit.cy(anc, q[j], ctrl_state='0')
                 else:
                     circuit.cz(anc, q[j], ctrl_state='0')
@@ -151,7 +151,7 @@ class TFIM():
         if not control_free:
             q = QuantumRegister(self.nqubits, 'q')
             circuit = QuantumCircuit(q)
-            for _ in range(n-1):
+            for _ in range(n):
                 circuit.compose(H_1(), q, inplace=True)
                 circuit.compose(H_2(), q, inplace=True)
                 circuit.compose(H_1(), q, inplace=True)
@@ -159,7 +159,7 @@ class TFIM():
             q = QuantumRegister(self.nqubits, 'q')
             anc = QuantumRegister(1, 'ancilla')
             circuit = QuantumCircuit(anc, q)
-            for _ in range(n-1):
+            for _ in range(n):
                 circuit.compose(K(), anc[:] + q[:], inplace=True)
                 circuit.barrier(q)
                 circuit.compose(H_1(), q, inplace=True)

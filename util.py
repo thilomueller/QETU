@@ -37,3 +37,28 @@ def get_state(circ):
     result = backend.run(transpile(circ, backend)).result()
     full_statevector  = result.get_statevector(circ)
     return full_statevector
+
+def qiskit2normal(mat):
+    """Converts a unitary matrix in Qiskit qubit ordering to textbook ordering."""
+    import numpy as np
+
+    orig_shape = mat.shape
+    intlog2 = lambda x: x.bit_length() - 1
+    qubits = intlog2(mat.shape[0])
+    shape = [2] * (2 * qubits)
+    mat = mat.reshape(shape)
+    inputs = list(range(qubits))
+    outputs = list(range(qubits, 2 * qubits))
+    mat = np.transpose(mat, axes=inputs[::-1] + outputs[::-1])
+    return mat.reshape(orig_shape)
+
+
+def circuit2matrix(circ, keep_qiskit_ordering=True):
+    """Converts a qiskit circuit into an unitary numpy array."""
+    from qiskit.quantum_info import Operator
+
+    mat = Operator(circ).data
+    if keep_qiskit_ordering:
+        return mat
+    return qiskit2normal(mat)
+
