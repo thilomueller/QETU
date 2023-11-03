@@ -89,22 +89,22 @@ class FermiHubbard():
                                    = \prod_{j,σ} exp(-i*Δt*1/4*(1/2 u - μ) * Z_k / n)
                                    = \prod_{j,σ} RZ(1/2*Δt*(1/2 u - μ)/n)            
                      ┌────┐  
-                ↑ ───┤ RX ├──
+                ↑ ───┤ RZ ├──
                      └────┘      
                      ┌────┐  
-                ↑ ───┤ RX ├──
+                ↑ ───┤ RZ ├──
                      └────┘      
                      ┌────┐  
-                ↓ ───┤ RX ├──
+                ↓ ───┤ RZ ├──
                      └────┘  
                      ┌────┐  
-                ↓ ───┤ RX ├──
+                ↓ ───┤ RZ ├──
                      └────┘  
             """
             λ = 1/2 * delta_t * (1/2 * self.u - self.μ) / n
             spin_up = QuantumRegister(self.nqubits, '↑')
             spin_down = QuantumRegister(self.nqubits, '↓')
-            circuit = QuantumCircuit(spin_up, spin_down)
+            circuit = QuantumCircuit(spin_down, spin_up)
             for j in range(self.nqubits):
                 circuit.rz(λ, spin_up[j])
                 circuit.rz(λ, spin_down[j])
@@ -134,8 +134,8 @@ class FermiHubbard():
             θ = 1/4 * delta_t * self.u / n
             spin_up = QuantumRegister(self.nqubits, '↑')
             spin_down = QuantumRegister(self.nqubits, '↓')
-            circuit = QuantumCircuit(spin_up, spin_down)
-            for j in range(self.nqubits):
+            circuit = QuantumCircuit(spin_down, spin_up)
+            for j in reversed(range(self.nqubits)):
                 circuit.rzz(θ, spin_up[j], spin_down[j])
             return circuit
         
@@ -193,15 +193,19 @@ class FermiHubbard():
 
             spin_up = QuantumRegister(self.nqubits, '↑')
             spin_down = QuantumRegister(self.nqubits, '↓')
-            circuit = QuantumCircuit(spin_up, spin_down)
+            circuit = QuantumCircuit(spin_down, spin_up)
             for j in range(self.nqubits-1):
                 if j % 2 == 0:
-                    circuit.append(sigma_gate(), [spin_up[j], spin_up[j+1]])
-                    circuit.append(sigma_gate(), [spin_down[j], spin_down[j+1]])
+                    #circuit.append(sigma_gate(), [spin_up[j], spin_up[j+1]])
+                    #circuit.append(sigma_gate(), [spin_down[j], spin_down[j+1]])
+                    circuit.append(sigma_gate(), [spin_up[j+1], spin_up[j]])
+                    circuit.append(sigma_gate(), [spin_down[j+1], spin_down[j]])
             for j in range(self.nqubits-1):
                 if j % 2 != 0:
-                    circuit.append(sigma_gate(), [spin_up[j], spin_up[j+1]])
-                    circuit.append(sigma_gate(), [spin_down[j], spin_down[j+1]])
+                    #circuit.append(sigma_gate(), [spin_up[j], spin_up[j+1]])
+                    #circuit.append(sigma_gate(), [spin_down[j], spin_down[j+1]])
+                    circuit.append(sigma_gate(), [spin_up[j+1], spin_up[j]])
+                    circuit.append(sigma_gate(), [spin_down[j+1], spin_down[j]])
             return circuit
         
         def K_1():
@@ -213,7 +217,7 @@ class FermiHubbard():
             anc = QuantumRegister(1, 'ancilla')
             spin_up = QuantumRegister(self.nqubits, '↑')
             spin_down = QuantumRegister(self.nqubits, '↓')
-            circuit = QuantumCircuit(anc, spin_up, spin_down)
+            circuit = QuantumCircuit(spin_down, spin_up, anc)
             for j in range(self.nqubits):
                 circuit.cx(anc, spin_up[j])
                 circuit.cx(anc, spin_down[j])
@@ -229,14 +233,14 @@ class FermiHubbard():
             anc = QuantumRegister(1, 'ancilla')
             spin_up = QuantumRegister(self.nqubits, '↑')
             spin_down = QuantumRegister(self.nqubits, '↓')
-            circuit = QuantumCircuit(anc, spin_up, spin_down)
+            circuit = QuantumCircuit(spin_down, spin_up, anc)
             for j in range(self.nqubits):
                 circuit.cx(anc, spin_up[j])
             return circuit
         
         def K_3():
             """
-                Implementation of the Pauli strng K_3 that anticommutes with the third term (kinetic hoppinig term) of the Fermi Hubbard Hamiltonian.
+                Implementation of the Pauli string K_3 that anticommutes with the third term (kinetic hoppinig term) of the Fermi Hubbard Hamiltonian.
 
                 K_3 = ( ⊗_{j even} (Z_{j,↑} ⊗ Z_{j,↓}) ) ⊗ ( ⊗_{j odd} (I_{j,↑} ⊗ I_{j,↓}) )
                     = I_{1,↑} ⊗ I_{1,↓} ⊗ Z_{2,↑} ⊗ Z_{2,↓} ⊗ I_{3,↑} ⊗ I_{3,↓} ⊗ ...
@@ -244,7 +248,7 @@ class FermiHubbard():
             anc = QuantumRegister(1, 'ancilla')
             spin_up = QuantumRegister(self.nqubits, '↑')
             spin_down = QuantumRegister(self.nqubits, '↓')
-            circuit = QuantumCircuit(anc, spin_up, spin_down)
+            circuit = QuantumCircuit(spin_down, spin_up, anc)
             for j in range(self.nqubits):
                 if j % 2 == 0:
                     circuit.cz(anc, spin_up[j])
@@ -253,29 +257,29 @@ class FermiHubbard():
         spin_up = QuantumRegister(self.nqubits, '↑')
         spin_down = QuantumRegister(self.nqubits, '↓')
         if not control_free:
-            circuit = QuantumCircuit(spin_up, spin_down)
+            circuit = QuantumCircuit(spin_down, spin_up)
             for _ in range(n):
-                circuit.compose(H_1(), spin_up[:] + spin_down[:], inplace=True)
-                circuit.compose(H_2(), spin_up[:] + spin_down[:], inplace=True)
-                circuit.compose(H_3(), spin_up[:] + spin_down[:], inplace=True)
-                circuit.compose(H_2(), spin_up[:] + spin_down[:], inplace=True)
-                circuit.compose(H_1(), spin_up[:] + spin_down[:], inplace=True)
+                circuit.compose(H_1(), spin_down[:] + spin_up[:], inplace=True)
+                circuit.compose(H_2(), spin_down[:] + spin_up[:], inplace=True)
+                circuit.compose(H_3(), spin_down[:] + spin_up[:], inplace=True)
+                circuit.compose(H_2(), spin_down[:] + spin_up[:], inplace=True)
+                circuit.compose(H_1(), spin_down[:] + spin_up[:], inplace=True)
         else:
             anc = QuantumRegister(1, 'ancilla')
-            circuit = QuantumCircuit(anc, spin_up, spin_down)
-            circuit.compose(K_1(), anc[:] + spin_up[:] + spin_down[:], inplace=True)
-            circuit.compose(H_1(), spin_up[:] + spin_down[:], inplace=True)
-            circuit.compose(K_1(), anc[:] + spin_up[:] + spin_down[:], inplace=True)
-            circuit.compose(K_2(), anc[:] + spin_up[:] + spin_down[:], inplace=True)
-            circuit.compose(H_2(), spin_up[:] + spin_down[:], inplace=True)
-            circuit.compose(K_2(), anc[:] + spin_up[:] + spin_down[:], inplace=True)
-            circuit.compose(K_3(), anc[:] + spin_up[:] + spin_down[:], inplace=True)
-            circuit.compose(H_3(), spin_up[:] + spin_down[:], inplace=True)
-            circuit.compose(K_3(), anc[:] + spin_up[:] + spin_down[:], inplace=True)
-            circuit.compose(K_2(), anc[:] + spin_up[:] + spin_down[:], inplace=True)
-            circuit.compose(H_2(), spin_up[:] + spin_down[:], inplace=True)
-            circuit.compose(K_2(), anc[:] + spin_up[:] + spin_down[:], inplace=True)
-            circuit.compose(K_1(), anc[:] + spin_up[:] + spin_down[:], inplace=True)
-            circuit.compose(H_1(), spin_up[:] + spin_down[:], inplace=True)
-            circuit.compose(K_1(), anc[:] + spin_up[:] + spin_down[:], inplace=True)
+            circuit = QuantumCircuit(spin_down, spin_up, anc)
+            circuit.compose(K_1(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
+            circuit.compose(H_1(), spin_down[:] + spin_up[:], inplace=True)
+            circuit.compose(K_1(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
+            circuit.compose(K_2(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
+            circuit.compose(H_2(), spin_down[:] + spin_up[:], inplace=True)
+            circuit.compose(K_2(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
+            circuit.compose(K_3(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
+            circuit.compose(H_3(), spin_down[:] + spin_up[:], inplace=True)
+            circuit.compose(K_3(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
+            circuit.compose(K_2(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
+            circuit.compose(H_2(), spin_down[:] + spin_up[:], inplace=True)
+            circuit.compose(K_2(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
+            circuit.compose(K_1(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
+            circuit.compose(H_1(), spin_down[:] + spin_up[:], inplace=True)
+            circuit.compose(K_1(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
         return circuit
