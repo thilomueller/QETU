@@ -62,3 +62,13 @@ def circuit2matrix(circ, keep_qiskit_ordering=True):
         return mat
     return qiskit2normal(mat)
 
+def transform_eigenvals(M, a=0.0, b=np.pi):
+    """
+        Transforms a unitary matrix M so that its eigenvalues are between [a,b]
+    """
+    λ, v = np.linalg.eig(M)
+    λ_min = λ.min()
+    λ_max = λ.max()
+    λ_t = (λ - λ_min) * (b - a) / (λ_max - λ_min) + a
+    M_t = v @ np.diag(λ_t) @ v.conj().T
+    return M_t
