@@ -115,7 +115,7 @@ class TFIM():
                 Implementation of the second part of the TFIM Hamiltonian.
 
                 exp(-i*Δt*H_2 / n) = \prod_j exp(-i*Δt/n * g* X_j)
-                                   = \prod_j RX(-2*Δt*g)
+                                   = \prod_j RX(-2*Δt*g/n)
             """
             q = QuantumRegister(self.nqubits, 'q')
             circuit = QuantumCircuit(q)
