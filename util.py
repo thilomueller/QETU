@@ -72,3 +72,13 @@ def transform_eigenvals(M, a=0.0, b=np.pi):
     λ_t = (λ - λ_min) * (b - a) / (λ_max - λ_min) + a
     M_t = v @ np.diag(λ_t) @ v.conj().T
     return M_t
+
+def spectral_gap(matrix):
+    """
+        Calculate the spectral gab of a matrix
+    """
+    eigenvalues = np.linalg.eigvals(matrix)
+    sorted_eigenvalues = np.sort(np.real(eigenvalues))
+    # Spectral gap is the difference between the two largest eigenvalues
+    gap = sorted_eigenvalues[-1] - sorted_eigenvalues[-2]
+    return gap
