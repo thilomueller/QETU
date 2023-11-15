@@ -183,10 +183,10 @@ class FermiHubbard():
                     ─┤     ├──      ─┤     ├───┤     ├──          
                      └─────┘         └─────┘   └─────┘  
                 """
-                θ = -4 * delta_t * self.t / n
+                θ = 4 * delta_t * -self.t / n
                 q = QuantumRegister(2, 'q')
                 circuit = QuantumCircuit(q)
-                circuit.rzz(θ, q[0], q[1])
+                circuit.rxx(θ, q[0], q[1])
                 circuit.ryy(θ, q[0], q[1])
                 gate = circuit.to_gate(label="Σ")
                 return gate
@@ -219,8 +219,8 @@ class FermiHubbard():
             spin_down = QuantumRegister(self.nqubits, '↓')
             circuit = QuantumCircuit(spin_down, spin_up, anc)
             for j in range(self.nqubits):
-                circuit.cx(anc, spin_up[j])
-                circuit.cx(anc, spin_down[j])
+                circuit.cx(anc, spin_up[j], ctrl_state='0')
+                circuit.cx(anc, spin_down[j], ctrl_state='0')
             return circuit
         
         def K_2():
@@ -235,7 +235,7 @@ class FermiHubbard():
             spin_down = QuantumRegister(self.nqubits, '↓')
             circuit = QuantumCircuit(spin_down, spin_up, anc)
             for j in range(self.nqubits):
-                circuit.cx(anc, spin_up[j])
+                circuit.cx(anc, spin_up[j], ctrl_state='0')
             return circuit
         
         def K_3():
@@ -251,7 +251,8 @@ class FermiHubbard():
             circuit = QuantumCircuit(spin_down, spin_up, anc)
             for j in range(self.nqubits):
                 if j % 2 == 0:
-                    circuit.cz(anc, spin_up[j])
+                    circuit.cz(anc, spin_up[j], ctrl_state='0')
+                    circuit.cz(anc, spin_down[j], ctrl_state='0')
             return circuit
         
         spin_up = QuantumRegister(self.nqubits, '↑')
@@ -267,19 +268,20 @@ class FermiHubbard():
         else:
             anc = QuantumRegister(1, 'ancilla')
             circuit = QuantumCircuit(spin_down, spin_up, anc)
-            circuit.compose(K_1(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
-            circuit.compose(H_1(), spin_down[:] + spin_up[:], inplace=True)
-            circuit.compose(K_1(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
-            circuit.compose(K_2(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
-            circuit.compose(H_2(), spin_down[:] + spin_up[:], inplace=True)
-            circuit.compose(K_2(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
-            circuit.compose(K_3(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
-            circuit.compose(H_3(), spin_down[:] + spin_up[:], inplace=True)
-            circuit.compose(K_3(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
-            circuit.compose(K_2(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
-            circuit.compose(H_2(), spin_down[:] + spin_up[:], inplace=True)
-            circuit.compose(K_2(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
-            circuit.compose(K_1(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
-            circuit.compose(H_1(), spin_down[:] + spin_up[:], inplace=True)
-            circuit.compose(K_1(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
+            for _ in range(n):
+                circuit.compose(K_1(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
+                circuit.compose(H_1(), spin_down[:] + spin_up[:], inplace=True)
+                circuit.compose(K_1(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
+                circuit.compose(K_2(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
+                circuit.compose(H_2(), spin_down[:] + spin_up[:], inplace=True)
+                circuit.compose(K_2(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
+                circuit.compose(K_3(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
+                circuit.compose(H_3(), spin_down[:] + spin_up[:], inplace=True)
+                circuit.compose(K_3(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
+                circuit.compose(K_2(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
+                circuit.compose(H_2(), spin_down[:] + spin_up[:], inplace=True)
+                circuit.compose(K_2(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
+                circuit.compose(K_1(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
+                circuit.compose(H_1(), spin_down[:] + spin_up[:], inplace=True)
+                circuit.compose(K_1(), spin_down[:] + spin_up[:] + anc[:], inplace=True)
         return circuit
