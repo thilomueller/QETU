@@ -21,7 +21,8 @@ class FakeWMI(FakeBackend):
         # Missing the sy gate because it's not native to Qiskit
         # However, this shouldn't introduce a large overhead
         self.gates_1q = ["sx", "x", "y", "rz"]
-        self.gates_2q = ["swap", "cp"]
+        #self.gates_2q = ["swap", "cp"]
+        self.gates_2q = ["iswap", "cp"]
         #self.gates_2q = [iSwapGate(), "cp"]
         self.basis_gates = self.gates_1q + self.gates_2q
         self.t1 = (36.0, "µs")
@@ -155,3 +156,27 @@ class FakeWMI(FakeBackend):
 backend = FakeWMI()
 noise_model = NoiseModel.from_backend(backend)
 noise_model
+
+def add_iswap_labels(qc : QuantumCircuit) -> QuantumCircuit:
+    """
+        This function takes a quantum circuit as an imput and replaces every iSwap gate with a custom labeled ISwap gate.
+        This is necessary so that the noise model can be applied to that gate.
+    """
+    import qiskit.quantum_info as qi
+    # iSWAP matrix operator
+    iswap_op = qi.Operator([[1, 0, 0, 0],
+                            [0, 0, 1j, 0],
+                            [0, 1j, 0, 0],
+                            [0, 0, 0, 1]])
+    qc1 = qc.copy()
+    for (i, data) in enumerate(qc1.data):
+        if data[0].name == "iswap":
+            # get the list of indices the quantum gate is operating on
+            list_of_indices = [q.index for q in data[1]]
+            # create a new labeled iswap gate
+            iswap_gate = QuantumCircuit(qc1.num_qubits)
+            iswap_gate.unitary(iswap_op, list_of_indices, label='iswap')
+            # remove the unlabel gate and replace it with a labeled one
+            qc1.data.pop(i)
+            qc1.data.insert(i, iswap_gate.data[0])
+    return qc1
