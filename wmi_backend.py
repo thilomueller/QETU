@@ -9,6 +9,10 @@ from qiskit.providers.models.backendconfiguration import QasmBackendConfiguratio
 #from .library.standard_gates.iswap import iSwapGate
 from qiskit.circuit.library import iSwapGate
 from datetime import datetime
+from qiskit.transpiler import CouplingMap, InstructionProperties
+from qiskit.providers import QubitProperties
+from qiskit.circuit.library import XXPlusYYGate
+import numpy as np
 
 class FakeWMI(FakeBackend):
     """A fake backend that simulates the 6-qubit ring WMI device."""
@@ -21,9 +25,7 @@ class FakeWMI(FakeBackend):
         # Missing the sy gate because it's not native to Qiskit
         # However, this shouldn't introduce a large overhead
         self.gates_1q = ["sx", "x", "y", "rz"]
-        #self.gates_2q = ["swap", "cp"]
-        self.gates_2q = ["iswap", "cp"]
-        #self.gates_2q = [iSwapGate(), "cp"]
+        self.gates_2q = ["iswap", "cp", "xx_plus_yy"]
         self.basis_gates = self.gates_1q + self.gates_2q
         self.t1 = (36.0, "µs")
         self.t2 = (8.47, "µs")
@@ -152,11 +154,6 @@ class FakeWMI(FakeBackend):
             coupling_map=self.coupling_map,
         )
 
-
-backend = FakeWMI()
-noise_model = NoiseModel.from_backend(backend)
-noise_model
-
 def add_iswap_labels(qc : QuantumCircuit) -> QuantumCircuit:
     """
         This function takes a quantum circuit as an imput and replaces every iSwap gate with a custom labeled ISwap gate.
@@ -179,4 +176,30 @@ def add_iswap_labels(qc : QuantumCircuit) -> QuantumCircuit:
             # remove the unlabel gate and replace it with a labeled one
             qc1.data.pop(i)
             qc1.data.insert(i, iswap_gate.data[0])
+    return qc1
+
+def add_xx_plus_yy_labels(qc : QuantumCircuit) -> QuantumCircuit:
+    """
+        This function takes a quantum circuit as an imput and replaces every XXPlusYYGate gate with a custom labeled gate.
+        This is necessary so that the noise model can be applied to that gate.
+    """
+    import qiskit.quantum_info as qi
+    qc1 = qc.copy()
+    for (i, data) in enumerate(qc1.data):
+        if data[0].name == "xx_plus_yy":
+            # get parameters
+            theta, beta = data[0].params
+            # construct operator
+            xx_plus_yy_op = qi.Operator([[1, 0,                                   0,                                    0],
+                                         [0, np.cos(theta/2),                     -1j*np.sin(theta/2)*np.exp(-1j*beta), 0],
+                                         [0, -1j*np.sin(theta/2)*np.exp(1j*beta), np.cos(theta/2),                      0],
+                                         [0, 0,                                   0,                                    1]])
+            # get the list of indices the quantum gate is operating on
+            list_of_indices = [q.index for q in data[1]]
+            # create a new labeled iswap gate
+            xx_plus_yy_gate = QuantumCircuit(qc1.num_qubits)
+            xx_plus_yy_gate.unitary(xx_plus_yy_op, list_of_indices, label='xx_plus_yy')
+            # remove the unlabel gate and replace it with a labeled one
+            qc1.data.pop(i)
+            qc1.data.insert(i, xx_plus_yy_gate.data[0])
     return qc1
