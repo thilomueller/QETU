@@ -57,8 +57,8 @@ class FermiHubbard():
             H_3 += np.kron(np.kron(np.kron(np.eye(2**(self.nqubits+i)), sigma_minus), sigma_plus), np.eye(2**(self.nqubits-2-i)))
         H_3 *= -self.t
 
-        H_TFIM = H_1 + H_2 + H_3
-        return H_TFIM
+        H_FH = H_1 + H_2 + H_3
+        return H_FH
 
     def Trotterization(
             self,
