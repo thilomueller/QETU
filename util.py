@@ -82,3 +82,10 @@ def spectral_gap(matrix):
     # Spectral gap is the difference between the two largest eigenvalues
     gap = sorted_eigenvalues[-1] - sorted_eigenvalues[-2]
     return gap
+
+def compute_depth_no_rz(qc : QuantumCircuit) -> int:
+    qc1 = qc.copy()
+    rz_gates = [i for (i, data) in enumerate(qc1.data) if data[0].name == "rz"]
+    for i in reversed(rz_gates):
+        qc1.data.pop(i)
+    return qc1.depth()
