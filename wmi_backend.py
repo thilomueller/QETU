@@ -15,13 +15,13 @@ from qiskit.circuit.library import XXPlusYYGate
 import numpy as np
 
 class FakeWMI(FakeBackend):
-    """A fake backend that simulates the 6-qubit ring WMI device."""
+    """A fake backend that simulates the 6-qubit grid-like WMI device."""
 
     def __init__(self):
         self.backend_name = "fake_wmi"
         self.ver = "0.0.0"
         self.now = datetime.now()
-        self.n_qubits = 6
+        self.n_qubits = 9
         # Missing the sy gate because it's not native to Qiskit
         # However, this shouldn't introduce a large overhead
         self.gates_1q = ["sx", "x", "y", "rz"]
@@ -48,13 +48,12 @@ class FakeWMI(FakeBackend):
         return self._properties
 
     def _generate_cmap(self) -> list[list[int]]:
-        """Build a closed ring-like coupling map."""
-        cmap = []
-        for i in range(self.n_qubits):
-            pair = [i, (i + 1) % self.n_qubits]
-            cmap.append(pair)
-            cmap.append(pair[::-1])
-        return cmap
+        """Build a closed grid-like coupling map."""
+        coupling_map = [(0, 1), (1, 2), (3, 4),
+                        (4, 5), (6, 7), (7, 8),
+                        (0, 3), (1, 4), (2, 5),
+                        (3, 6), (4, 7), (5, 8)]
+        return coupling_map
 
     def _build_probs(self) -> BackendProperties:
         """Build the backend properties object."""
