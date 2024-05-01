@@ -9,7 +9,7 @@ from qiskit.providers import BackendV2 as Backend
 from qiskit.transpiler import Target
 from qiskit.providers import Options
 from qiskit.circuit import Parameter, Measure
-from qiskit.circuit.library import PhaseGate, SXGate, XGate, YGate, RZGate, CPhaseGate, IGate
+from qiskit.circuit.library import PhaseGate, SXGate, XGate, YGate, RZGate, CPhaseGate, IGate, RZZGate
 from qiskit.circuit.parameterexpression import ParameterValueType
 from qiskit.transpiler import InstructionProperties
 from qiskit.quantum_info.operators import Operator
@@ -143,6 +143,14 @@ class WMIBackendGrid(Backend):
         def_fswap.x(0)
         def_fswap.append(SYGate(), [0])
         SessionEquivalenceLibrary.add_equivalence(fSwap(), def_fswap)
+
+        # RZZ(0) => RZ1(0) CP(20) RZ1(0)
+        q = QuantumRegister(2, "q")
+        def_rzz = QuantumCircuit(q)
+        def_rzz.append(RZGate(theta), [q[1]], [])
+        def_rzz.append(CPhaseGate(2*theta), [q[0], q[1]], [])
+        def_rzz.append(RZGate(theta), [q[1]], [])
+        SessionEquivalenceLibrary.add_equivalence(RZZGate(theta), def_rzz)
  
         # Set option validators
         self.options.set_validator("shots", (1, 4096))
