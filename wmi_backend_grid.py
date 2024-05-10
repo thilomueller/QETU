@@ -147,8 +147,8 @@ class WMIBackendGrid(Backend):
         # RZZ(0) => RZ1(0) CP(20) RZ1(0)
         q = QuantumRegister(2, "q")
         def_rzz = QuantumCircuit(q)
-        def_rzz.append(RZGate(theta), [q[1]], [])
-        def_rzz.append(CPhaseGate(2*theta), [q[0], q[1]], [])
+        def_rzz.append(RZGate(theta), [q[0]], [])
+        def_rzz.append(CPhaseGate(-2*theta), [q[0], q[1]], [])
         def_rzz.append(RZGate(theta), [q[1]], [])
         SessionEquivalenceLibrary.add_equivalence(RZZGate(theta), def_rzz)
  
