@@ -137,11 +137,6 @@ class WMIBackendGrid(Backend):
         def_fswap.append(ParamISwap(theta=np.pi, eta=0), [q[0], q[1]], [])
         def_fswap.rz(-np.pi/2, 0)
         def_fswap.rz(-np.pi/2, 1)
-        # remove global phase
-        def_fswap.append(SYGate(), [0])
-        def_fswap.rz(-np.pi, 0)
-        def_fswap.x(0)
-        def_fswap.append(SYGate(), [0])
         SessionEquivalenceLibrary.add_equivalence(fSwap(), def_fswap)
 
         # RZZ(0) => RZ1(0) CP(20) RZ1(0)
