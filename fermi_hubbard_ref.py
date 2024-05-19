@@ -47,7 +47,7 @@ op_34 = sp.sparse.kron(I, sp.sparse.kron(I, sp.sparse.kron(I, sp.sparse.kron(Z, 
 op_35 = sp.sparse.kron(I, sp.sparse.kron(I, sp.sparse.kron(I, sp.sparse.kron(Z, sp.sparse.kron(I, sp.sparse.kron(I, sp.sparse.kron(I, I))))))) # Z_4
 op_36 = sp.sparse.kron(I, sp.sparse.kron(I, sp.sparse.kron(I, sp.sparse.kron(I, sp.sparse.kron(I, sp.sparse.kron(I, sp.sparse.kron(I, Z))))))) # Z_8
 
-def ref_fh_hamiltonian(u=1, t=-2, delta_t=1):
+def ref_fh_hamiltonian(u=2, t=1):
     """
     Creates a reference Hamiltonian of the 2x2 Fermi Hubbard model.
 
@@ -59,7 +59,23 @@ def ref_fh_hamiltonian(u=1, t=-2, delta_t=1):
     Returns:
         A numpy array of the reference Hamiltonian.
     """
-    H = sp.sparse.linalg.expm(-0.25j*u*(op_19 + op_24 + op_29 + op_34)
+    H = 0.25*u*(op_19 + op_24 + op_29 + op_34) -2*t*(op_1 + op_2 + op_3 + op_4 + op_5 + op_6 + op_7 + op_8
+                                                                   + op_9 + op_10 + op_11 + op_12 + op_13 + op_14 + op_15 + op_16)
+    return H.toarray()
+
+def ref_fh_op(u=2, t=1, delta_t=1):
+    """
+    Creates a reference time evolution operator of the 2x2 Fermi Hubbard model.
+
+    Args:
+        u - Coulomb repulsion energy
+        t - kinetic hopping term
+        delta_t - time difference
+
+    Returns:
+        A numpy array of the reference time evolution operator.
+    """
+    U = sp.sparse.linalg.expm(-1j*0.25*u*delta_t*(op_19 + op_24 + op_29 + op_34)
                               -1j*-2*t*delta_t*(op_1 + op_2 + op_3 + op_4 + op_5 + op_6 + op_7 + op_8
                                                 + op_9 + op_10 + op_11 + op_12 + op_13 + op_14 + op_15 + op_16))
-    return H.toarray()
+    return U.toarray()
