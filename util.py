@@ -19,25 +19,6 @@ def R_z(theta):
     return np.array([[np.exp(-1j*theta/2), 0], [0, np.exp(1j*theta/2)]], dtype = 'complex_')
 
 
-def get_matrix(circ):
-    """
-        Takes a qiskit circuit and returns the corresponding matrix
-    """
-    backend = Aer.get_backend('unitary_simulator')
-    job = execute(circ, backend)
-    result = job.result()
-    matrix = np.array(result.get_unitary(circ, decimals=15))
-    return matrix
-
-def get_state(circ):
-    """
-        Takes a qiskit circuit and returns the resulting statevector
-    """
-    backend = BasicAer.get_backend('statevector_simulator') # the device to run on
-    result = backend.run(transpile(circ, backend)).result()
-    full_statevector  = result.get_statevector(circ)
-    return full_statevector
-
 def qiskit2normal(mat):
     """Converts a unitary matrix in Qiskit qubit ordering to textbook ordering."""
     import numpy as np
@@ -89,3 +70,51 @@ def compute_depth_no_rz(qc : QuantumCircuit) -> int:
     for i in reversed(rz_gates):
         qc1.data.pop(i)
     return qc1.depth()
+
+def add_sy_labels(qc : QuantumCircuit) -> QuantumCircuit:
+    """
+        This function takes a quantum circuit as an imput and replaces every Squared Y gate with a custom labeled ISwap gate.
+        This is necessary so that the noise model can be applied to that gate.
+    """
+    import qiskit.quantum_info as qi
+    # iSWAP matrix operator
+    sy_op = qi.Operator([[0.5+0.5j, -0.5-0.5j],
+                            [0.5+0.5j, 0.5+0.5j]])
+    qc1 = qc.copy()
+    for (i, data) in enumerate(qc1.data):
+        if data[0].name == "sy":
+            # get the list of indices the quantum gate is operating on
+            list_of_indices = data[1]
+            # create a new labeled iswap gate
+            sy_gate = QuantumCircuit(qc1.num_qubits)
+            sy_gate.unitary(sy_op, list_of_indices, label='sy')
+            # remove the unlabel gate and replace it with a labeled one
+            qc1.data.pop(i)
+            qc1.data.insert(i, sy_gate.data[0])
+    return qc1
+
+def add_pswap_labels(qc : QuantumCircuit) -> QuantumCircuit:
+    """
+        This function takes a quantum circuit as an imput and replaces every Parametric Swap gate with a custom labeled gate.
+        This is necessary so that the noise model can be applied to that gate.
+    """
+    import qiskit.quantum_info as qi
+    qc1 = qc.copy()
+    for (i, data) in enumerate(qc1.data):
+        if data[0].name == "pswap":
+            # get parameters
+            theta, eta = data[0].params
+            # construct operator
+            pswap_op = qi.Operator([[1, 0,                                  0,                                 0],
+                                    [0, np.cos(theta/2),                    1j*np.sin(theta/2)*np.exp(1j*eta), 0],
+                                    [0, 1j*np.sin(theta/2)*np.exp(-1j*eta), np.cos(theta/2),                   0],
+                                    [0, 0,                                  0,                                 1]])
+            # get the list of indices the quantum gate is operating on
+            list_of_indices = data[1]
+            # create a new labeled iswap gate
+            pswap_gate = QuantumCircuit(qc1.num_qubits)
+            pswap_gate.unitary(pswap_op, list_of_indices, label='pswap')
+            # remove the unlabel gate and replace it with a labeled one
+            qc1.data.pop(i)
+            qc1.data.insert(i, pswap_gate.data[0])
+    return qc1

@@ -7,9 +7,9 @@ from qiskit.quantum_info.operators import Operator
 
 from qiskit.providers import BackendV2 as Backend
 from qiskit.transpiler import Target
-from qiskit.providers import Options
+from qiskit.providers import Options, QubitProperties
 from qiskit.circuit import Parameter, Measure
-from qiskit.circuit.library import PhaseGate, SXGate, XGate, YGate, RZGate, CPhaseGate, IGate, RZZGate
+from qiskit.circuit.library import PhaseGate, SXGate, XGate, YGate, RZGate, CPhaseGate, IGate, RZZGate, CZGate, CXGate
 from qiskit.circuit.parameterexpression import ParameterValueType
 from qiskit.transpiler import InstructionProperties
 from qiskit.quantum_info.operators import Operator
@@ -91,39 +91,57 @@ class WMIBackendGrid(Backend):
             (6, 3), (7, 4), (8, 5)
         ]
 
+        # Parameters for the error model
+        t1 = 3.6e-5                 # 36 µs
+        t2 = 8.47e-6                # 8.47 µs
+        duration_1q = 4e-8          # 40 ns
+        duration_2q = 1.5e-7        # 150 ns
+        duration_readout = 1.5e-6   # 1500 ns
+        fidelity_1q = 0.998
+        fidelity_2q = 0.94
+        fidelity_readout = 0.85
+        frequency = 5.0             # GHz
+        error_1q = 1.0 - fidelity_1q
+        error_2q = 1.0 - fidelity_2q
+        error_readout = 1.0 - fidelity_readout
+
+        qubit_properties = QubitProperties(t1=t1, t2=t2, frequency=frequency)
+
+        #self._target.qubit_properties = qubit_properties
+        self.qubit_properties = qubit_properties
+
         theta = Parameter("ϴ")
         lam = Parameter("λ")
         beta = Parameter("β")
         eta = Parameter("η")
 
         # SX
-        sx_props = {(qubit,): None for qubit in range(9)}
+        sx_props = {(qubit,): InstructionProperties(duration=duration_1q, error=error_1q) for qubit in range(9)}
         self._target.add_instruction(SXGate(), sx_props)
         # SY
-        sy_props = {(qubit,): None for qubit in range(9)}
+        sy_props = {(qubit,): InstructionProperties(duration=duration_1q, error=error_1q) for qubit in range(9)}
         self._target.add_instruction(SYGate(), sy_props)
         # X
-        x_props = {(qubit,): None for qubit in range(9)}
+        x_props = {(qubit,): InstructionProperties(duration=duration_1q, error=error_1q) for qubit in range(9)}
         self._target.add_instruction(XGate(), x_props)#
         # Y
-        y_props = {(qubit,): None for qubit in range(9)}
+        y_props = {(qubit,): InstructionProperties(duration=duration_1q, error=error_1q) for qubit in range(9)}
         self._target.add_instruction(YGate(), y_props)
         # RZ
         rz_props = {(qubit,): None for qubit in range(9)}
         self._target.add_instruction(RZGate(theta), rz_props)
         # CPhase
-        cp_props = {(qubit1, qubit2): None for (qubit1, qubit2) in coupling_map}
+        cp_props = {(qubit1, qubit2): InstructionProperties(duration=duration_2q, error=error_2q) for (qubit1, qubit2) in coupling_map}
         self._target.add_instruction(CPhaseGate(lam), cp_props)
         # ParamISwap
-        param_iswap_props = {(qubit1, qubit2): None for (qubit1, qubit2) in coupling_map}
+        param_iswap_props = {(qubit1, qubit2): InstructionProperties(duration=duration_2q, error=error_2q) for (qubit1, qubit2) in coupling_map}
         self._target.add_instruction(ParamISwap(theta, eta), param_iswap_props)
         # measurement
-        meas_props = {(qubit,): None for qubit in range(9)}
+        meas_props = {(qubit,): InstructionProperties(duration=duration_readout, error=error_readout) for qubit in range(9)}
         self._target.add_instruction(Measure(), meas_props)
         # Identity
         id_props = {(qubit,): None for qubit in range(9)}
         self._target.add_instruction(IGate(), id_props)
-
 
         # iSWAP => U_{iSWAP}(pi)
         q = QuantumRegister(2, "q")
@@ -137,6 +155,11 @@ class WMIBackendGrid(Backend):
         def_fswap.append(ParamISwap(theta=np.pi, eta=0), [q[0], q[1]], [])
         def_fswap.rz(-np.pi/2, 0)
         def_fswap.rz(-np.pi/2, 1)
+        # remove global phase
+        def_fswap.append(SYGate(), [0])
+        def_fswap.rz(-np.pi, 0)
+        def_fswap.x(0)
+        def_fswap.append(SYGate(), [0])
         SessionEquivalenceLibrary.add_equivalence(fSwap(), def_fswap)
 
         # RZZ(0) => RZ1(0) CP(20) RZ1(0)
@@ -145,12 +168,34 @@ class WMIBackendGrid(Backend):
         def_rzz.append(RZGate(theta), [q[0]], [])
         def_rzz.append(CPhaseGate(-2*theta), [q[0], q[1]], [])
         def_rzz.append(RZGate(theta), [q[1]], [])
-        SessionEquivalenceLibrary.add_equivalence(RZZGate(theta), def_rzz)
+        #SessionEquivalenceLibrary.add_equivalence(RZZGate(theta), def_rzz)
+
+        # ZCZ
+        q = QuantumRegister(2, "q")
+        def_cz0 = QuantumCircuit(q)
+        def_cz0.rz(np.pi, 1)
+        def_cz0.cp(np.pi, 0, 1)
+        # remove global phase
+        def_cz0.append(SYGate(), [0])
+        def_cz0.rz(np.pi, 0)
+        def_cz0.x(0)
+        def_cz0.append(SYGate(), [0])
+        SessionEquivalenceLibrary.add_equivalence(CZGate(ctrl_state="0"), def_cz0)
+
+        # ZCX
+        q = QuantumRegister(2, "q")
+        def_cx0 = QuantumCircuit(q)
+        def_cx0.rz(np.pi, 0)
+        def_cx0.append(SYGate(), [1])
+        def_cx0.cp(-np.pi, 0, 1)
+        def_cx0.append(SYGate(), [1])
+        def_cx0.rz(np.pi, 1)
+        SessionEquivalenceLibrary.add_equivalence(CXGate(ctrl_state="0"), def_cx0)
  
         # Set option validators
         self.options.set_validator("shots", (1, 4096))
         self.options.set_validator("memory", bool)
- 
+
     @property
     def target(self):
         return self._target

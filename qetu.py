@@ -16,13 +16,15 @@ def QSP(phi_vec, x=0):
 
 def QETU(
         block_encoding_qc,
-        phi_vec
+        phi_vec,
+        anc = None
 ):
     """
         Implements the Quantum Eigenvalue Transformation of Unitary Matrices.
     """
     n = block_encoding_qc.num_qubits-1
-    anc = QuantumRegister(1, 'ancilla')
+    if anc is None:
+        anc = QuantumRegister(1, 'ancilla')
     q = QuantumRegister(n, 'q')
     c = ClassicalRegister(1, 'c')
     circuit = QuantumCircuit(q, anc, c)
