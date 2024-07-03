@@ -77,7 +77,7 @@ def construct_trotter_V(u, t, delta_t, trotter_steps, shift=False):
     add_trotter_steps(V_trotter_qc, spin_up, spin_down, aux, 4, u, t, tau, trotter_steps, True, False)
     return V_trotter_qc
     
-def construct_QETU_circ(u, t, degree, trotter_steps):
+def construct_QETU_circ(u, t, degree, trotter_steps, phi_vec):
     """
     Construct the overall QETU circuit.
 
@@ -90,14 +90,13 @@ def construct_QETU_circ(u, t, degree, trotter_steps):
             the degree of the polynomial
         trotter_steps: int
             number of Trotter steps
+        phi_vec: numpy array
+            vector of the phase angles
 
     Returns:
         QETU_circ: QuantumCircuit
             A qiskit circuit representation of the QETU algorithm
     """
-    mat_step_func = scipy.io.loadmat('../phase_angles/step_function_02_d' + str(degree) + '.mat')['phi_proc']
-    step_function_qsp_angles = list(itertools.chain.from_iterable(mat_step_func))
-    phi_vec = convert_Zrot_to_Xrot(step_function_qsp_angles)
     num_sites = 4
     spin_up = QuantumRegister(num_sites, '↑')
     spin_down = QuantumRegister(num_sites, '↓')
