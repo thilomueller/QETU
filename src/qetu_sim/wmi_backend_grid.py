@@ -222,3 +222,37 @@ class WMIBackendGrid(Backend):
         job_json = convert_to_wire_format(circuit, options)
         job_handle = submit_to_backend(job_jsonb)
         return MyJob(self. job_handle, job_json, circuit)
+    
+def wmi_grid_noise_model():
+    """The noise model for the WMI grid-like quantum computer."""
+    from qiskit_aer.noise import (NoiseModel, QuantumError, ReadoutError,
+    pauli_error, depolarizing_error, thermal_relaxation_error)
+    # Parameters for the error model
+    t1 = 3.6e-5                 # 36 µs
+    t2 = 8.47e-6                # 8.47 µs
+    duration_1q = 4e-8          # 40 ns
+    duration_2q = 1.5e-7        # 150 ns
+    duration_readout = 1.5e-6   # 1500 ns
+    fidelity_1q = 0.998
+    fidelity_2q = 0.94
+    fidelity_readout = 0.85
+    frequency = 5.0             # GHz
+    error_1q = 1.0 - fidelity_1q
+    error_2q = 1.0 - fidelity_2q
+    error_readout = 1.0 - fidelity_readout
+
+    # QuantumError objects
+    error_measure = thermal_relaxation_error(t1, t2, duration_readout)
+    thermal_error_1  = thermal_relaxation_error(t1, t2, duration_1q)
+    thermal_error_2  = thermal_relaxation_error(t1, t2, duration_2q)
+    thermal_error_2 = thermal_error_2.tensor(thermal_error_2)
+    depol_error_1 = depolarizing_error(error_1q, 1)
+    depol_error_2 = depolarizing_error(error_2q, 2)
+
+    noise_model = NoiseModel()
+    #noise_model.add_all_qubit_quantum_error(error_measure, ["measure"])
+    #noise_model.add_all_qubit_quantum_error(thermal_error_1, ["sx", "sy", "x", "y"])
+    #noise_model.add_all_qubit_quantum_error(thermal_error_2, ["cp", "pswap"])
+    noise_model.add_all_qubit_quantum_error(depol_error_1, ["sx", "sy", "x", "y"])
+    noise_model.add_all_qubit_quantum_error(depol_error_2, ["cp", "pswap"])
+    return noise_model

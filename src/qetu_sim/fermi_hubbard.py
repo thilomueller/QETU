@@ -1,6 +1,6 @@
 import numpy as np
 from qiskit import *
-from util import *
+from qetu_sim.util import *
 
 class FermiHubbard():
     """

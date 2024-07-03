@@ -1,6 +1,6 @@
 from qiskit import *
-from wmi_backend_grid import *
-from wmi_decompositions import *
+from qetu_sim.wmi_backend_grid import *
+from qetu_sim.wmi_decompositions import *
 
 def add_trotter_steps(trotter_circuit, spin_up, spin_down, aux=None, num_sites=4, u=1, t=-1, delta_t=1, n=1, ctrl_free=False, include_barriers=True):
     """
