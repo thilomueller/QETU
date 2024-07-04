@@ -1,0 +1,3 @@
+[submodule "external/QSPPACK"]
+	path = external/QSPPACK
+	url = https://github.com/qsppack/QSPPACK.git
