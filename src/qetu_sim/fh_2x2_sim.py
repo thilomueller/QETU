@@ -39,9 +39,39 @@ def calculate_shift_params(u, t):
     λ_min = λ.min()
     λ_max = λ.max()
     η = 0.05
-    c1 = (np.pi/2 - 2*η) / (λ_max - λ_min)
+    c1 = (np.pi - 2*η) / (λ_max - λ_min)
     c2 = η - c1 * λ_min
     return c1, c2
+
+def calculate_qsp_params(u, t):
+    """
+    Calculate the parameters to define the heaviside function that can be used
+    to filter the ground state of the given Hamiltonian.
+
+    Args:
+        u: float
+            on-site Couloumb repulsion energy of the Hamiltonian
+        t: float
+            hopping energy of the Hamiltonian
+    
+    Returns:
+
+    """
+    c1, c2 = calculate_shift_params(u, t)
+    H = ref_fh_hamiltonian(u=u, t=t)
+    λ, v = np.linalg.eigh(H)
+    λ = λ.real
+    λ_min = λ.min()
+    λ_max = λ.max()
+    λ_sh = λ * c1 + c2
+    dist = 0.05
+    mu = 0.5 * (λ_sh[0] + λ_sh[1])
+    gap = (λ_sh[1] - λ_sh[0])
+    E_min = dist * 0.5
+    E_max = np.pi - dist
+    E_mu_m = mu - gap/2, 
+    E_mu_p = mu + gap/2, 
+    return E_min, E_mu_m, E_mu_p, E_max
 
 def construct_trotter_V(u, t, delta_t, trotter_steps, shift=False):
     """
@@ -77,7 +107,7 @@ def construct_trotter_V(u, t, delta_t, trotter_steps, shift=False):
     add_trotter_steps(V_trotter_qc, spin_up, spin_down, aux, 4, u, t, tau, trotter_steps, True, False)
     return V_trotter_qc
     
-def construct_QETU_circ(u, t, degree, trotter_steps, phi_vec):
+def construct_QETU_circ(u, t, trotter_steps, phi_vec):
     """
     Construct the overall QETU circuit.
 
@@ -86,8 +116,6 @@ def construct_QETU_circ(u, t, degree, trotter_steps, phi_vec):
             on-site Couloumb repulsion energy of the Hamiltonian
         t: float
             hopping energy of the Hamiltonian
-        degree: int
-            the degree of the polynomial
         trotter_steps: int
             number of Trotter steps
         phi_vec: numpy array
@@ -217,7 +245,7 @@ def calculate_reference_ground_state(u, t, shift=False):
     else:
         H = ref_H_matrix
     λ, v = np.linalg.eigh(H)
-    ground_state_index = np.argmin(np.cos(λ))
+    ground_state_index = np.argmin(λ)
     ground_state_energy = λ[ground_state_index]
     ground_state_vector = v[:, ground_state_index]
     return ground_state_energy, ground_state_vector
