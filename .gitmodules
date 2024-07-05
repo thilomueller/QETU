@@ -1,3 +1,9 @@
 [submodule "external/QSPPACK"]
 	path = external/QSPPACK
 	url = https://github.com/qsppack/QSPPACK.git
+[submodule "external/chebfun"]
+	path = external/chebfun
+	url = https://github.com/chebfun/chebfun.git
+[submodule "external/CVX"]
+	path = external/CVX
+	url = https://github.com/cvxr/CVX.git
