@@ -18,9 +18,10 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-          
+
       - name: Install MATLAB
-        uses: matlab-actions/setup-matlab@v2 
+        uses: matlab-actions/setup-matlab@v2
+        run: export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/hostedtoolcache/MATLAB/2024.1.999/x64/bin/glnxa64
 
       - name: Install dependencies
         run: |
