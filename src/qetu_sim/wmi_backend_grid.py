@@ -249,10 +249,11 @@ def wmi_grid_noise_model():
     depol_error_1 = depolarizing_error(error_1q, 1)
     depol_error_2 = depolarizing_error(error_2q, 2)
 
+    q1_error = depol_error_1.compose(thermal_error_1)
+    q2_error = depol_error_2.compose(thermal_error_2)
+
     noise_model = NoiseModel()
-    #noise_model.add_all_qubit_quantum_error(error_measure, ["measure"])
-    #noise_model.add_all_qubit_quantum_error(thermal_error_1, ["sx", "sy", "x", "y"])
-    #noise_model.add_all_qubit_quantum_error(thermal_error_2, ["cp", "pswap"])
-    noise_model.add_all_qubit_quantum_error(depol_error_1, ["sx", "sy", "x", "y"])
-    noise_model.add_all_qubit_quantum_error(depol_error_2, ["cp", "pswap"])
+    noise_model.add_all_qubit_quantum_error(error_measure, ["measure"])
+    noise_model.add_all_qubit_quantum_error(q1_error, ["sx", "sy", "x", "y"])
+    noise_model.add_all_qubit_quantum_error(q2_error, ["cp", "pswap"])
     return noise_model
