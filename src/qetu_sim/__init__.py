@@ -7,3 +7,4 @@ from qetu_sim.wmi_backend_grid import *
 from qetu_sim.wmi_backend_ring import *
 from qetu_sim.wmi_decompositions import *
 from qetu_sim.qsp_phase_matlab import *
+from qetu_sim.energy_estimation import *

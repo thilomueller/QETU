@@ -39,7 +39,7 @@ def calculate_shift_params(u, t):
     λ_min = λ.min()
     λ_max = λ.max()
     η = 0.05
-    c1 = (np.pi - 2*η) / (λ_max - λ_min)
+    c1 = (np.pi/2 - 2*η) / (λ_max - λ_min)
     c2 = η - c1 * λ_min
     return c1, c2
 
@@ -69,8 +69,8 @@ def calculate_qsp_params(u, t):
     gap = (λ_sh[1] - λ_sh[0])
     E_min = dist * 0.5
     E_max = np.pi - dist
-    E_mu_m = mu - gap/2, 
-    E_mu_p = mu + gap/2, 
+    E_mu_m = mu - gap/2 
+    E_mu_p = mu + gap/2 
     return E_min, E_mu_m, E_mu_p, E_max
 
 def construct_trotter_V(u, t, delta_t, trotter_steps, shift=False):
@@ -186,6 +186,7 @@ def qetu_sim(QETU_circ, initial_state):
     """
     num_qubits = QETU_circ.num_qubits - 1
     final_state = initial_state.evolve(QETU_circ, qargs=[2,6,4,3,8,0,7,5,1])
+    #print(initial_state.expectation_value(QETU_circ, qargs=[2,6,4,3,8,0,7,5,1]))
     final_state = final_state.data.real * -1
     final_state = final_state[0:2**num_qubits]
     return final_state
@@ -207,11 +208,11 @@ def qetu_sim_noise(QETU_circ, initial_state, noise_model):
             A numpy array representing the final state in textbook qubit ordering
     """
     noise_model.add_basis_gates(['unitary'])     
-    sim_noise = AerSimulator(noise_model=noise_model)   
+    sim_noise = AerSimulator(method='unitary', noise_model=noise_model)
     QETU_circ.save_unitary()
     QETU_circ = add_pswap_labels(QETU_circ)
     QETU_circ = add_sy_labels(QETU_circ)
-    QETU_circ = transpile(QETU_circ, sim_noise, basis_gates=['pswap', 'cp', 'rz', 'sx', 'sy', 'x', 'y', 'save_unitary'])
+    QETU_circ = transpile(QETU_circ, sim_noise, basis_gates=['pswap', 'cp', 'rz', 'sx', 'sy', 'x', 'y', 'save_unitary', 'unitary'])
     # Run on the simulator with noise
     num_qubits = QETU_circ.num_qubits - 1
     noise_result = sim_noise.run(QETU_circ).result()

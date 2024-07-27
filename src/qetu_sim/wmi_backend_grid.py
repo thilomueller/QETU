@@ -223,8 +223,17 @@ class WMIBackendGrid(Backend):
         job_handle = submit_to_backend(job_jsonb)
         return MyJob(self. job_handle, job_json, circuit)
     
-def wmi_grid_noise_model():
-    """The noise model for the WMI grid-like quantum computer."""
+def wmi_grid_noise_model(depol_only=False):
+    """
+    The noise model for the WMI grid-like quantum computer.
+    
+    Args:
+        depol_only: Boolean
+            Indicates if the noise model should only consider depolarization errors.
+    
+    Returns:
+        noise_model
+    """
     from qiskit_aer.noise import (NoiseModel, QuantumError, ReadoutError,
     pauli_error, depolarizing_error, thermal_relaxation_error)
     # Parameters for the error model
@@ -249,11 +258,14 @@ def wmi_grid_noise_model():
     depol_error_1 = depolarizing_error(error_1q, 1)
     depol_error_2 = depolarizing_error(error_2q, 2)
 
-    q1_error = depol_error_1.compose(thermal_error_1)
-    q2_error = depol_error_2.compose(thermal_error_2)
-
     noise_model = NoiseModel()
-    noise_model.add_all_qubit_quantum_error(error_measure, ["measure"])
+    if depol_only:
+        q1_error = depol_error_1
+        q2_error = depol_error_2
+    else:
+        q1_error = depol_error_1.compose(thermal_error_1)
+        q2_error = depol_error_2.compose(thermal_error_2)
+        noise_model.add_all_qubit_quantum_error(error_measure, ["measure"])
     noise_model.add_all_qubit_quantum_error(q1_error, ["sx", "sy", "x", "y"])
     noise_model.add_all_qubit_quantum_error(q2_error, ["cp", "pswap"])
     return noise_model
