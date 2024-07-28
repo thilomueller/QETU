@@ -223,19 +223,13 @@ class WMIBackendGrid(Backend):
         job_handle = submit_to_backend(job_jsonb)
         return MyJob(self. job_handle, job_json, circuit)
     
-def wmi_grid_noise_model(depol_only=False):
+def wmi_grid_noise_model():
     """
     The noise model for the WMI grid-like quantum computer.
-    
-    Args:
-        depol_only: Boolean
-            Indicates if the noise model should only consider depolarization errors.
-    
+
     Returns:
-        noise_model
+        noise_model: NoiseModel
     """
-    from qiskit_aer.noise import (NoiseModel, QuantumError, ReadoutError,
-    pauli_error, depolarizing_error, thermal_relaxation_error)
     # Parameters for the error model
     t1 = 3.6e-5                 # 36 µs
     t2 = 8.47e-6                # 8.47 µs
@@ -246,6 +240,36 @@ def wmi_grid_noise_model(depol_only=False):
     fidelity_2q = 0.94
     fidelity_readout = 0.85
     frequency = 5.0             # GHz
+    return noise_model(t1, t2, duration_1q, duration_2q, duration_readout, fidelity_1q, fidelity_1q, fidelity_readout)
+
+def noise_model(t1, t2, duration_1q, duration_2q, duration_readout, fidelity_1q, fidelity_2q, fidelity_readout):
+    """
+    Returns a noise model combining the thermal relaxation error with the depolarizing noise model
+    for given error parameters.
+
+    Args:
+        t1: float
+            relaxation time T1 [µs]
+        t2: float
+            dephasing time T2 [µs]
+        duration_1q: float
+            duration of single-qubit gate executions in [ns]
+        duration_2q: float
+            duration of  two-qubit gate executions in [ns]
+        duration_readout: float
+            duration of the readout operation in [ns]
+        fidelity_1q: float
+            fidelity of single-qubit operations
+        fidelity_2q: float
+            fidelity of two-qubit operations
+        fidelity_measurement: float
+            fidelity of measurement operations
+
+    Returns:
+        noise_model: NoiseModel
+    """
+    from qiskit_aer.noise import (NoiseModel, QuantumError, ReadoutError,
+    pauli_error, depolarizing_error, thermal_relaxation_error)
     error_1q = 1.0 - fidelity_1q
     error_2q = 1.0 - fidelity_2q
     error_readout = 1.0 - fidelity_readout
@@ -259,13 +283,9 @@ def wmi_grid_noise_model(depol_only=False):
     depol_error_2 = depolarizing_error(error_2q, 2)
 
     noise_model = NoiseModel()
-    if depol_only:
-        q1_error = depol_error_1
-        q2_error = depol_error_2
-    else:
-        q1_error = depol_error_1.compose(thermal_error_1)
-        q2_error = depol_error_2.compose(thermal_error_2)
-        noise_model.add_all_qubit_quantum_error(error_measure, ["measure"])
+    q1_error = depol_error_1.compose(thermal_error_1)
+    q2_error = depol_error_2.compose(thermal_error_2)
+    noise_model.add_all_qubit_quantum_error(error_measure, ["measure"])
     noise_model.add_all_qubit_quantum_error(q1_error, ["sx", "sy", "x", "y"])
     noise_model.add_all_qubit_quantum_error(q2_error, ["cp", "pswap"])
     return noise_model
