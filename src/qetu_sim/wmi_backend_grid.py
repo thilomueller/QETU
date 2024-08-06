@@ -240,18 +240,18 @@ def wmi_grid_noise_model():
     fidelity_2q = 0.94
     fidelity_readout = 0.85
     frequency = 5.0             # GHz
-    return noise_model(t1, t2, duration_1q, duration_2q, duration_readout, fidelity_1q, fidelity_1q, fidelity_readout)
+    return define_noise_model(t1, t2, duration_1q, duration_2q, duration_readout, fidelity_1q, fidelity_1q, fidelity_readout)
 
-def noise_model(t1, t2, duration_1q, duration_2q, duration_readout, fidelity_1q, fidelity_2q, fidelity_readout):
+def define_noise_model(t1, t2, duration_1q, duration_2q, duration_readout, fidelity_1q, fidelity_2q, fidelity_readout):
     """
     Returns a noise model combining the thermal relaxation error with the depolarizing noise model
     for given error parameters.
 
     Args:
         t1: float
-            relaxation time T1 [µs]
+            relaxation time T1 [ns]
         t2: float
-            dephasing time T2 [µs]
+            dephasing time T2 [ns]
         duration_1q: float
             duration of single-qubit gate executions in [ns]
         duration_2q: float
@@ -288,4 +288,5 @@ def noise_model(t1, t2, duration_1q, duration_2q, duration_readout, fidelity_1q,
     noise_model.add_all_qubit_quantum_error(error_measure, ["measure"])
     noise_model.add_all_qubit_quantum_error(q1_error, ["sx", "sy", "x", "y"])
     noise_model.add_all_qubit_quantum_error(q2_error, ["cp", "pswap"])
+    noise_model.add_basis_gates(['unitary'])
     return noise_model
