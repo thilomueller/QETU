@@ -9,7 +9,7 @@ from qetu_sim.util import *
 from qiskit import *
 from qiskit_aer import AerSimulator
 
-def calculate_propability(counts, q1_pos, q2_pos, q1, q2):
+def calculate_propability(counts, q1_pos, q2_pos, q1, q2, use_num_conservation=False):
     """
     Given the measurement results, this function calculates the probability
     of measuring the qubits at position q1_pos and q2_pos as q1 and q2, respectively
@@ -25,12 +25,19 @@ def calculate_propability(counts, q1_pos, q2_pos, q1, q2):
             Expected measurement result of the first qubit
         q2: int
             Expected measurement result of the second qubit
+        use_num_conservation: boolean
+            Indicates whether invalid shots that violate the
+            number symmetry of fermions should be discarded
 
     Returns:
         probability: float
     """
     # only include successful measurements
     counts = {bitstring: count for (bitstring, count) in counts.items() if int(bitstring[4]) == 0}
+    if use_num_conservation:
+        counts = {bitstring: count for (bitstring, count) in counts.items()
+            if (int(bitstring[0]) + int(bitstring[1]) + int(bitstring[2]) + int(bitstring[3])
+                + int(bitstring[5]) + int(bitstring[6]) + int(bitstring[7]) + int(bitstring[8])) == 4}
     num_shots = np.sum([count for _, count in counts.items()])
     if num_shots == 0:
         print("No successful measurement!")
@@ -52,7 +59,7 @@ def add_transform_to_XX_YY_basis(circ, q1, q2):
     circ.cx(q2, q1)
     return circ
 
-def estimate_ground_state_energy(prepared_state, u=1, t=1, num_shots=1_000, noise_model=None):
+def estimate_ground_state_energy(prepared_state, u=1, t=1, num_shots=1_000, noise_model=None, use_num_conservation=False):
     """
     Estimate the ground state energy for a given QETU circuit.
 
@@ -63,6 +70,8 @@ def estimate_ground_state_energy(prepared_state, u=1, t=1, num_shots=1_000, nois
             Number of shots to repeat each experiment
         noise_model: NoiseModel
             A noise model which should be applied to the energy estimation process
+        use_num_conservation: boolean
+            Indicates whether invalid shots that violate the number symmetry of fermions should be discarded
     
     Returns:
         E_0: float
@@ -87,7 +96,7 @@ def estimate_ground_state_energy(prepared_state, u=1, t=1, num_shots=1_000, nois
     
     for qubit_pair in onsite_pairs:
         for probe in probes_onsite:
-            probability = calculate_propability(counts_onsite, qubit_pair[0], qubit_pair[1], probe[0], probe[1])
+            probability = calculate_propability(counts_onsite, qubit_pair[0], qubit_pair[1], probe[0], probe[1], use_num_conservation)
             expectation_value_onsite += (-1)**probe[0] * (-1)**probe[1] * probability
     
     # hopping term 1
@@ -108,10 +117,10 @@ def estimate_ground_state_energy(prepared_state, u=1, t=1, num_shots=1_000, nois
     counts_hop_1 = result_hop_1.get_counts(0)
 
     for qubit_pair in hop_1_pairs:
-        probability_00 = calculate_propability(counts_hop_1, qubit_pair[0], qubit_pair[0], 0, 0)
-        probability_01 = calculate_propability(counts_hop_1, qubit_pair[0], qubit_pair[1], 0, 1)
-        probability_10 = calculate_propability(counts_hop_1, qubit_pair[0], qubit_pair[1], 1, 0)
-        probability_11 = calculate_propability(counts_hop_1, qubit_pair[0], qubit_pair[1], 1, 1)
+        probability_00 = calculate_propability(counts_hop_1, qubit_pair[0], qubit_pair[0], 0, 0, use_num_conservation)
+        probability_01 = calculate_propability(counts_hop_1, qubit_pair[0], qubit_pair[1], 0, 1, use_num_conservation)
+        probability_10 = calculate_propability(counts_hop_1, qubit_pair[0], qubit_pair[1], 1, 0, use_num_conservation)
+        probability_11 = calculate_propability(counts_hop_1, qubit_pair[0], qubit_pair[1], 1, 1, use_num_conservation)
 
         expectation_value_hop_1 += 0*probability_00
         expectation_value_hop_1 += 2*probability_01
@@ -151,10 +160,10 @@ def estimate_ground_state_energy(prepared_state, u=1, t=1, num_shots=1_000, nois
     counts_hop_2 = result_hop_2.get_counts(0)
 
     for qubit_pair in hop_2_pairs:
-        probability_00 = calculate_propability(counts_hop_2, qubit_pair[0], qubit_pair[0], 0, 0)
-        probability_01 = calculate_propability(counts_hop_2, qubit_pair[0], qubit_pair[1], 0, 1)
-        probability_10 = calculate_propability(counts_hop_2, qubit_pair[0], qubit_pair[1], 1, 0)
-        probability_11 = calculate_propability(counts_hop_2, qubit_pair[0], qubit_pair[1], 1, 1)
+        probability_00 = calculate_propability(counts_hop_2, qubit_pair[0], qubit_pair[0], 0, 0, use_num_conservation)
+        probability_01 = calculate_propability(counts_hop_2, qubit_pair[0], qubit_pair[1], 0, 1, use_num_conservation)
+        probability_10 = calculate_propability(counts_hop_2, qubit_pair[0], qubit_pair[1], 1, 0, use_num_conservation)
+        probability_11 = calculate_propability(counts_hop_2, qubit_pair[0], qubit_pair[1], 1, 1, use_num_conservation)
 
         expectation_value_hop_2 += 0*probability_00
         expectation_value_hop_2 += 2*probability_01
@@ -176,13 +185,13 @@ def estimate_ground_state_energy(prepared_state, u=1, t=1, num_shots=1_000, nois
 
     for qubit_pair in hop_parity_pairs:
         for probe in probes_hop_parity:
-            probability = calculate_propability(counts_hop_pairty, qubit_pair[0], qubit_pair[1], probe[0], probe[1])
+            probability = calculate_propability(counts_hop_pairty, qubit_pair[0], qubit_pair[1], probe[0], probe[1], use_num_conservation)
             expectation_value_hop_parity += (-1)**probe[0] * (-1)**probe[1] * probability
     
     E0_meas = 0.25*u*expectation_value_onsite -2*t*(expectation_value_hop_1 + expectation_value_hop_2)
     return E0_meas
 
-def estimate_ground_state_energy_from_statevector_list(prepared_states, u=1, t=1, noise_model=None):
+def estimate_ground_state_energy_from_statevector_list(prepared_states, u=1, t=1, noise_model=None, use_num_conservation=False):
     """
     Estimate the ground state energy for a given QETU circuit from a list of given statevectors.
     These statevectors are the outcome of a noisy simulation run.
@@ -192,6 +201,8 @@ def estimate_ground_state_energy_from_statevector_list(prepared_states, u=1, t=1
             List of the statevectors
         noise_model: NoiseModel
             A noise model which should be applied to the energy estimation process
+        use_num_conservation: boolean
+            Indicates whether invalid shots that violate the number symmetry of fermions should be discarded
     
     Returns:
         E_0: float
@@ -226,7 +237,7 @@ def estimate_ground_state_energy_from_statevector_list(prepared_states, u=1, t=1
     
     for qubit_pair in onsite_pairs:
         for probe in probes_onsite:
-            probability = calculate_propability(counts_onsite, qubit_pair[0], qubit_pair[1], probe[0], probe[1])
+            probability = calculate_propability(counts_onsite, qubit_pair[0], qubit_pair[1], probe[0], probe[1], use_num_conservation)
             expectation_value_onsite += (-1)**probe[0] * (-1)**probe[1] * probability
     
     # hopping term 1
@@ -249,10 +260,10 @@ def estimate_ground_state_energy_from_statevector_list(prepared_states, u=1, t=1
         counts_hop_1 = combine_dicts(counts_hop_1, result_hop_1.get_counts(0))
 
     for qubit_pair in hop_1_pairs:
-        probability_00 = calculate_propability(counts_hop_1, qubit_pair[0], qubit_pair[0], 0, 0)
-        probability_01 = calculate_propability(counts_hop_1, qubit_pair[0], qubit_pair[1], 0, 1)
-        probability_10 = calculate_propability(counts_hop_1, qubit_pair[0], qubit_pair[1], 1, 0)
-        probability_11 = calculate_propability(counts_hop_1, qubit_pair[0], qubit_pair[1], 1, 1)
+        probability_00 = calculate_propability(counts_hop_1, qubit_pair[0], qubit_pair[0], 0, 0, use_num_conservation)
+        probability_01 = calculate_propability(counts_hop_1, qubit_pair[0], qubit_pair[1], 0, 1, use_num_conservation)
+        probability_10 = calculate_propability(counts_hop_1, qubit_pair[0], qubit_pair[1], 1, 0, use_num_conservation)
+        probability_11 = calculate_propability(counts_hop_1, qubit_pair[0], qubit_pair[1], 1, 1, use_num_conservation)
 
         expectation_value_hop_1 += 0*probability_00
         expectation_value_hop_1 += 2*probability_01
@@ -291,10 +302,10 @@ def estimate_ground_state_energy_from_statevector_list(prepared_states, u=1, t=1
         counts_hop_2 = combine_dicts(counts_hop_2, result_hop_2.get_counts(0))
 
     for qubit_pair in hop_2_pairs:
-        probability_00 = calculate_propability(counts_hop_2, qubit_pair[0], qubit_pair[0], 0, 0)
-        probability_01 = calculate_propability(counts_hop_2, qubit_pair[0], qubit_pair[1], 0, 1)
-        probability_10 = calculate_propability(counts_hop_2, qubit_pair[0], qubit_pair[1], 1, 0)
-        probability_11 = calculate_propability(counts_hop_2, qubit_pair[0], qubit_pair[1], 1, 1)
+        probability_00 = calculate_propability(counts_hop_2, qubit_pair[0], qubit_pair[0], 0, 0, use_num_conservation)
+        probability_01 = calculate_propability(counts_hop_2, qubit_pair[0], qubit_pair[1], 0, 1, use_num_conservation)
+        probability_10 = calculate_propability(counts_hop_2, qubit_pair[0], qubit_pair[1], 1, 0, use_num_conservation)
+        probability_11 = calculate_propability(counts_hop_2, qubit_pair[0], qubit_pair[1], 1, 1, use_num_conservation)
 
         expectation_value_hop_2 += 0*probability_00
         expectation_value_hop_2 += 2*probability_01
