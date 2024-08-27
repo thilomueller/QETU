@@ -60,14 +60,16 @@ class TestQETU(unittest.TestCase):
            -0.0003,   -0.0002,   -0.0001,   -0.0001,   -0.0001,   -0.0000,   -0.0000,   -0.0000,
            -0.0000,   -0.0000,   -0.0000,   -0.0000,   -0.0000,   -0.0000,   -0.0000,   -0.0000,
            -0.0000,   -0.0000,    0.7854]
-        phi_vec = convert_Zrot_to_Xrot(step_function_qsp_angles)
+        phi_vec = step_function_qsp_angles
         QETU_circ = construct_QETU_circ(u, t, trotter_steps, phi_vec)
         QETU_circ_WMI = transpile_QETU_to_WMI(QETU_circ)
-        initial_state = Statevector.from_label("0-+0++++0")
-        final_state = qetu_sim(QETU_circ_WMI, initial_state)
-        ground_state_energy, ground_state_vector = calculate_reference_ground_state(u, t, True)
+        final_state = qetu_sim(QETU_circ_WMI)
+        H_ref = ref_fh_hamiltonian(u=u, t=t, WMI_qubit_layout=True, include_aux=True)
+        λ, v = np.linalg.eigh(H_ref)
+        ground_state_energy = λ[0]
+        ground_state_vector = v[:,0]
         success_probability = scipy.linalg.norm(final_state)**2
-        overlap = abs(np.vdot(final_state / scipy.linalg.norm(final_state), ground_state_vector))**2
+        overlap = abs(np.vdot(final_state, ground_state_vector))**2
         self.assertGreaterEqual(overlap, 0.95, "The overlap with the ground state is not high enough.")
         print("overlap: " + str(overlap))
 
