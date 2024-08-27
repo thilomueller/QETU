@@ -106,6 +106,20 @@ def construct_trotter_V(u, t, delta_t, trotter_steps, shift=False):
         tau = delta_t
     add_trotter_steps(V_trotter_qc, spin_up, spin_down, aux, 4, u, t, tau, trotter_steps, True, False)
     return V_trotter_qc
+
+def prepare_init_state(circ):
+    """
+    Prepare the initial state |ψ_init> = |0> |1001> |--++> in the ideal hardware qubit layout.
+    """
+    circ.x(0)
+    circ.h(0)
+    circ.x(2)
+    circ.x(3)
+    circ.h(3)
+    circ.h(5)
+    circ.x(6)
+    circ.h(8)
+    return circ
     
 def construct_QETU_circ(u, t, trotter_steps, phi_vec):
     """
@@ -125,14 +139,16 @@ def construct_QETU_circ(u, t, trotter_steps, phi_vec):
         QETU_circ: QuantumCircuit
             A qiskit circuit representation of the QETU algorithm
     """
+    phi_vec[0] += np.pi/4
+    phi_vec[-1] -= np.pi/4
     num_sites = 4
     spin_up = QuantumRegister(num_sites, '↑')
     spin_down = QuantumRegister(num_sites, '↓')
     aux = QuantumRegister(1, 'aux')
     QETU_circ = QuantumCircuit(spin_down, spin_up, aux)
     V_trotter_sh_qc = construct_trotter_V(u, t, 1, trotter_steps, True)
-    QETU_circ.rx(-2*phi_vec[0], aux)
-    for phi in phi_vec[1:]:
+    QETU_circ.rx(-2*phi_vec[-1], aux)
+    for phi in phi_vec[-2::-1]:
         QETU_circ.compose(V_trotter_sh_qc, inplace=True)
         QETU_circ.rx(-2*phi, aux)
     return QETU_circ
@@ -170,57 +186,36 @@ def transpile_QETU_to_WMI(QETU_circ):
     )
     return QETU_circ_transpiled
 
-def qetu_sim(QETU_circ, initial_state):
+def qetu_sim(QETU_circ, noise_model=None):
     """
     Perform a simulation of the QETU ground state preparation.
 
     Args:
         QETU_circ: QuantumCircuit
             Qiskit representation of the QETU circuit for the WMI hardware
-        initial_state: Statevector
-            initial quantum state that should be evolved by the circuit
 
     Returns:
         final_state: numpy array
             A numpy array representing the final state in textbook qubit ordering
     """
-    num_qubits = QETU_circ.num_qubits - 1
-    final_state = initial_state.evolve(QETU_circ, qargs=[2,6,4,3,8,0,7,5,1])
-    #print(initial_state.expectation_value(QETU_circ, qargs=[2,6,4,3,8,0,7,5,1]))
-    final_state = final_state.data.real * -1
-    final_state = final_state[0:2**num_qubits]
-    return final_state
-
-def qetu_sim_noise(QETU_circ, initial_state, noise_model):
-    """
-    Perform a noisy simulation of the QETU ground state preparation.
-
-    Args:
-        QETU_circ: QuantumCircuit
-            Qiskit representation of the QETU circuit for the WMI hardware
-        initial_state: Statevector
-            initial quantum state that should be evolved by the circuit
-        noise_model:
-            Noise model of the WMI hardware
-
-    Returns:
-        final_state: numpy array
-            A numpy array representing the final state in textbook qubit ordering
-    """
-    noise_model.add_basis_gates(['unitary'])     
-    sim_noise = AerSimulator(method='unitary', noise_model=noise_model)
-    QETU_circ.save_unitary()
-    QETU_circ = add_pswap_labels(QETU_circ)
-    QETU_circ = add_sy_labels(QETU_circ)
-    QETU_circ = transpile(QETU_circ, sim_noise, basis_gates=['pswap', 'cp', 'rz', 'sx', 'sy', 'x', 'y', 'save_unitary', 'unitary'])
-    # Run on the simulator with noise
-    num_qubits = QETU_circ.num_qubits - 1
-    noise_result = sim_noise.run(QETU_circ).result()
-    noise_unitary = noise_result.get_unitary(QETU_circ)
-    final_state_noise = initial_state.evolve(noise_unitary, qargs=[2,6,4,3,8,0,7,5,1])
-    final_state_noise = final_state_noise.data.real * -1
-    final_state_noise = final_state_noise[0:2**num_qubits]
-    return final_state_noise
+    if noise_model is None:
+        simulator = AerSimulator()
+    else:
+        simulator = AerSimulator(noise_model=noise_model)
+    successful = False
+    while not successful:
+        circuit = QuantumCircuit(9, 9)
+        prepare_init_state(circuit)
+        circuit.compose(QETU_circ, inplace=True)
+        circuit.measure(4, 4)
+        circuit.save_statevector(pershot=True)
+        #circuit.measure_all(add_bits=False)
+        #circuit = transpile(circuit, basis_gates=['pswap', 'cp', 'rz', 'sx', 'sy', 'x', 'y'])
+        circuit = add_pswap_labels(circuit)
+        circuit = add_sy_labels(circuit)
+        result = simulator.run(transpile(circuit, simulator, basis_gates=['pswap', 'cp', 'rz', 'sx', 'sy', 'x', 'y', 'unitary', 'save_statevector', 'measure']), shots=1).result()
+        successful = int(list(result.get_counts().keys())[0][4]) == 0
+    return result.data()['statevector'][0].data
 
 def calculate_reference_ground_state(u, t, shift=False):
     """

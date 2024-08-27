@@ -1,7 +1,9 @@
 import numpy as np
 import scipy.linalg
 import itertools
+import json
 
+from qetu_sim.fh_2x2_sim import *
 from qetu_sim.qetu import *
 from qetu_sim.wmi_backend_grid import *
 from qetu_sim.util import *
@@ -314,3 +316,193 @@ def estimate_ground_state_energy_from_statevector_list(prepared_states, u=1, t=1
     
     E0_meas = 0.25*u*expectation_value_onsite -2*t*(expectation_value_hop_1 + expectation_value_hop_2)
     return E0_meas
+
+
+def estimate_ground_state_energy_from_circ(onsite_circ, hop_1_circ, hop_2_circ, u=1, t=1, num_shots=1_000, noise_model=None, use_num_conservation=False):
+    """
+    Estimate the ground state energy for a given QETU circuit.
+
+    Args:
+        prepared_state: numpy array
+            Approximation of the ground state prepared by the QETU circuit (needs to be normalized)
+        num_shots: int
+            Number of shots to repeat each experiment
+        noise_model: NoiseModel
+            A noise model which should be applied to the energy estimation process
+        use_num_conservation: boolean
+            Indicates whether invalid shots that violate the number symmetry of fermions should be discarded
+    
+    Returns:
+        E_0: float
+            Reconstructed ground state energy
+    """
+    if noise_model is not None:
+        simulator = AerSimulator(noise_model=noise_model)
+    else:
+        simulator = AerSimulator()
+
+    # onsite term
+    expectation_value_onsite = 0
+    result_onsite = simulator.run(onsite_circ, shots=num_shots).result()
+    counts_onsite = result_onsite.get_counts(0)
+
+    probes_onsite = [(0,0), (0,1), (1,0), (1,1)]
+    onsite_pairs = [(2,5), (7,8), (1,0), (6,3)]
+    
+    for qubit_pair in onsite_pairs:
+        for probe in probes_onsite:
+            probability = calculate_propability(counts_onsite, qubit_pair[0], qubit_pair[1], probe[0], probe[1], use_num_conservation)
+            expectation_value_onsite += (-1)**probe[0] * (-1)**probe[1] * probability
+    
+    # hopping term 1
+    expectation_value_hop_1 = 0
+    hop_1_pairs = [(2,1), (7,6), (5,8), (0,3)]
+
+    result_hop_1 = simulator.run(transpile(hop_1_circ, simulator), shots=num_shots).result()
+    counts_hop_1 = result_hop_1.get_counts(0)
+
+    for qubit_pair in hop_1_pairs:
+        probability_00 = calculate_propability(counts_hop_1, qubit_pair[0], qubit_pair[0], 0, 0, use_num_conservation)
+        probability_01 = calculate_propability(counts_hop_1, qubit_pair[0], qubit_pair[1], 0, 1, use_num_conservation)
+        probability_10 = calculate_propability(counts_hop_1, qubit_pair[0], qubit_pair[1], 1, 0, use_num_conservation)
+        probability_11 = calculate_propability(counts_hop_1, qubit_pair[0], qubit_pair[1], 1, 1, use_num_conservation)
+
+        expectation_value_hop_1 += 0*probability_00
+        expectation_value_hop_1 += 2*probability_01
+        expectation_value_hop_1 += -2*probability_10
+        expectation_value_hop_1 += 0*probability_11
+
+    # hopping term 2
+    expectation_value_hop_2 = 0
+    hop_2_pairs = [(2,1), (7,6), (5,8), (0,3)]
+
+    result_hop_2 = simulator.run(transpile(hop_2_circ, simulator),
+                                 shots=num_shots).result()
+    counts_hop_2 = result_hop_2.get_counts(0)
+
+    for qubit_pair in hop_2_pairs:
+        probability_00 = calculate_propability(counts_hop_2, qubit_pair[0], qubit_pair[0], 0, 0, use_num_conservation)
+        probability_01 = calculate_propability(counts_hop_2, qubit_pair[0], qubit_pair[1], 0, 1, use_num_conservation)
+        probability_10 = calculate_propability(counts_hop_2, qubit_pair[0], qubit_pair[1], 1, 0, use_num_conservation)
+        probability_11 = calculate_propability(counts_hop_2, qubit_pair[0], qubit_pair[1], 1, 1, use_num_conservation)
+
+        expectation_value_hop_2 += 0*probability_00
+        expectation_value_hop_2 += 2*probability_01
+        expectation_value_hop_2 += -2*probability_10
+        expectation_value_hop_2 += 0*probability_11
+
+    E0_meas = 0.25*u*expectation_value_onsite -2*t*(expectation_value_hop_1 + expectation_value_hop_2)
+    return E0_meas
+
+class QobjEncoder(json.JSONEncoder):
+    """
+    Taken from: https://docs.quantum.ibm.com/api/qiskit/0.37/qiskit.qobj.Qobj#to_dict
+    """
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, complex):
+            return (obj.real, obj.imag)
+        return json.JSONEncoder.default(self, obj)
+
+def create_qobj(ansatz_circ):
+    """
+    Create the qobj files for all circuits necessary to estimate the ground state energy.
+
+    Args:
+        ansatz_circuit: QuantumCircuit
+            Quantum circuit that is used to prepare the ground state
+    """
+
+    # onsite term
+    onsite_circ = QuantumCircuit(9)
+    prepare_init_state(onsite_circ)
+    onsite_circ.compose(ansatz_circ, inplace=True)
+    onsite_circ.measure_all()
+    onsite_circ = transpile(onsite_circ, basis_gates=['pswap', 'cp', 'rz', 'sx', 'sy', 'x', 'y'])
+    onsite_qobj = assemble(onsite_circ)
+    f = open("onsite_circ.qobj", "w+")
+    f.write(json.dumps(onsite_qobj.to_dict(), cls=QobjEncoder))
+    f.close()
+
+    # hopping term 1
+    hop_1_circ = QuantumCircuit(9)
+    prepare_init_state(hop_1_circ)
+    hop_1_circ.compose(ansatz_circ, inplace=True)
+    hop_1_pairs = [(2,1), (7,6), (5,8), (0,3)]
+    for qubit_pair in hop_1_pairs:
+        hop_1_circ = add_transform_to_XX_YY_basis(hop_1_circ, qubit_pair[0], qubit_pair[1])
+    hop_1_circ.measure_all()
+    hop_1_circ = transpile(hop_1_circ, basis_gates=['pswap', 'cp', 'rz', 'sx', 'sy', 'x', 'y'])
+    hop_1_qobj = assemble(hop_1_circ)
+    f = open("hop_1_circ.qobj", "w+")
+    f.write(json.dumps(hop_1_qobj.to_dict(), cls=QobjEncoder))
+    f.close()
+
+    # hopping term 2
+    hop_2_circ = QuantumCircuit(9)
+    hop_2_pairs = [(2,1), (7,6), (5,8), (0,3)]
+    prepare_init_state(hop_2_circ)
+    hop_2_circ.compose(ansatz_circ, inplace=True)
+    swaps = [(2,5), (7,8), (1,0), (6,3)]
+    for swap in swaps:
+        hop_2_circ.append(fSwap(), swap)
+    for qubit_pair in hop_2_pairs:
+        hop_2_circ = add_transform_to_XX_YY_basis(hop_2_circ, qubit_pair[0], qubit_pair[1])
+    hop_2_circ.measure_all()
+    hop_2_circ = transpile(hop_2_circ, basis_gates=['pswap', 'cp', 'rz', 'sx', 'sy', 'x', 'y'])
+    hop_2_qobj = assemble(hop_2_circ)
+    f = open("hop_2_circ.qobj", "w+")
+    f.write(json.dumps(hop_2_qobj.to_dict(), cls=QobjEncoder))
+    f.close()
+
+
+
+def create_energy_estimation_circuits(ansatz_circ):
+    """
+    Create the three circuits that are necessary to estimate the ground state energy.
+
+    Args:
+        ansatz_circuit: QuantumCircuit
+            Quantum circuit that is used to prepare the ground state
+    
+    Returns:
+        onsite_circ: QuantumCircuit
+        hop_1_circ: QuantumCircuit
+        hop_2_circ: QuantumCircuit
+    """
+
+    # onsite term
+    onsite_circ = QuantumCircuit(9, 9)
+    prepare_init_state(onsite_circ)
+    onsite_circ.compose(ansatz_circ, inplace=True)
+    onsite_circ.measure(4, 4)
+    onsite_circ.measure_all(add_bits=False)
+    onsite_circ = transpile(onsite_circ, basis_gates=['pswap', 'cp', 'rz', 'sx', 'sy', 'x', 'y'])
+
+    # hopping term 1
+    hop_1_circ = QuantumCircuit(9, 9)
+    prepare_init_state(hop_1_circ)
+    hop_1_circ.compose(ansatz_circ, inplace=True)
+    hop_1_pairs = [(2,1), (7,6), (5,8), (0,3)]
+    for qubit_pair in hop_1_pairs:
+        hop_1_circ = add_transform_to_XX_YY_basis(hop_1_circ, qubit_pair[0], qubit_pair[1])
+    hop_1_circ.measure(4, 4)
+    hop_1_circ.measure_all(add_bits=False)
+    hop_1_circ = transpile(hop_1_circ, basis_gates=['pswap', 'cp', 'rz', 'sx', 'sy', 'x', 'y'])
+
+    # hopping term 2
+    hop_2_circ = QuantumCircuit(9, 9)
+    hop_2_pairs = [(2,1), (7,6), (5,8), (0,3)]
+    prepare_init_state(hop_2_circ)
+    hop_2_circ.compose(ansatz_circ, inplace=True)
+    swaps = [(2,5), (7,8), (1,0), (6,3)]
+    for swap in swaps:
+        hop_2_circ.append(fSwap(), swap)
+    for qubit_pair in hop_2_pairs:
+        hop_2_circ = add_transform_to_XX_YY_basis(hop_2_circ, qubit_pair[0], qubit_pair[1])
+    hop_2_circ.measure(4, 4)
+    hop_2_circ.measure_all(add_bits=False)
+    hop_2_circ = transpile(hop_2_circ, basis_gates=['pswap', 'cp', 'rz', 'sx', 'sy', 'x', 'y'])
+
+    return onsite_circ, hop_1_circ, hop_2_circ
