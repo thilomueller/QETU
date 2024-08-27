@@ -39,8 +39,7 @@ class TestTrotter(unittest.TestCase):
         H_ref = ref_fh_hamiltonian(u, t)
         c1, c2 = calculate_shift_params(u, t) 
         H_sh_ref = c1*H_ref + c2*np.eye(H_ref.shape[0])
-        tau = delta_t*c1
-        U_sh_ref = ref_fh_op(u, t, tau) @ scipy.linalg.expm(-1j*c2*np.eye(H_ref.shape[0]))
+        U_sh_ref = scipy.linalg.expm(-1j*H_sh_ref)
         V_sh_ref = scipy.linalg.block_diag(U_sh_ref.conjugate().transpose(), U_sh_ref)
         trotter_steps_list = range(1,10)
         previous_error = 2.0
