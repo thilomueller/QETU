@@ -216,6 +216,15 @@ def qetu_sim(QETU_circ, noise_model=None):
         result = simulator.run(transpile(circuit, simulator, basis_gates=['pswap', 'cp', 'rz', 'sx', 'sy', 'x', 'y', 'unitary', 'save_statevector', 'measure']), shots=1).result()
         successful = int(list(result.get_counts().keys())[0][4]) == 0
         print(successful)
+
+        H_ref = ref_fh_hamiltonian(u=1, t=1, WMI_qubit_layout=True, include_aux=True)
+        λ, v = np.linalg.eigh(H_ref)
+        ground_state_energy = λ[0]
+        ground_state_vector = v[:,0]
+        final_state = result.data()['statevector'][0].data
+        overlap = abs(np.vdot(final_state, ground_state_vector))**2
+        print("ov: " + str(overlap))
+
     return result.data()['statevector'][0].data
 
 def calculate_reference_ground_state(u, t, shift=False):

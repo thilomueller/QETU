@@ -40,8 +40,8 @@ class TestQETU(unittest.TestCase):
         ground_state_vector = v[:,0]
         success_probability = scipy.linalg.norm(final_state)**2
         overlap = abs(np.vdot(final_state, ground_state_vector))**2
-        self.assertGreaterEqual(overlap, 0.99, "The overlap with the ground state is not high enough.")
         print("overlap: " + str(overlap))
+        self.assertGreaterEqual(overlap, 0.99, "The overlap with the ground state is not high enough.")
 
 if __name__ == "__main__":
     unittest.main()
