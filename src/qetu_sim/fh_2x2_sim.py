@@ -213,7 +213,7 @@ def qetu_sim(QETU_circ, noise_model=None):
         #circuit = transpile(circuit, basis_gates=['pswap', 'cp', 'rz', 'sx', 'sy', 'x', 'y'])
         circuit = add_pswap_labels(circuit)
         circuit = add_sy_labels(circuit)
-        result = simulator.run(transpile(circuit, simulator, basis_gates=['pswap', 'cp', 'rz', 'sx', 'sy', 'x', 'y', 'unitary', 'save_statevector', 'measure']), shots=1).result()
+        result = simulator.run(transpile(circuit, simulator, basis_gates=['pswap', 'cp', 'rz', 'sx', 'sy', 'x', 'y', 'u3', 'unitary', 'save_statevector', 'measure']), shots=1).result()
         successful = int(list(result.get_counts().keys())[0][4]) == 0
     return result.data()['statevector'][0].data
 

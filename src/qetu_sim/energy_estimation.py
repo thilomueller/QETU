@@ -478,7 +478,7 @@ def create_energy_estimation_circuits(ansatz_circ):
     onsite_circ.compose(ansatz_circ, inplace=True)
     onsite_circ.measure(4, 4)
     onsite_circ.measure_all(add_bits=False)
-    onsite_circ = transpile(onsite_circ, basis_gates=['pswap', 'cp', 'rz', 'sx', 'sy', 'x', 'y'])
+    onsite_circ = transpile(onsite_circ, basis_gates=['pswap', 'cp', 'rz', 'sx', 'sy', 'x', 'y', 'u3'])
 
     # hopping term 1
     hop_1_circ = QuantumCircuit(9, 9)
@@ -489,7 +489,7 @@ def create_energy_estimation_circuits(ansatz_circ):
         hop_1_circ = add_transform_to_XX_YY_basis(hop_1_circ, qubit_pair[0], qubit_pair[1])
     hop_1_circ.measure(4, 4)
     hop_1_circ.measure_all(add_bits=False)
-    hop_1_circ = transpile(hop_1_circ, basis_gates=['pswap', 'cp', 'rz', 'sx', 'sy', 'x', 'y'])
+    hop_1_circ = transpile(hop_1_circ, basis_gates=['pswap', 'cp', 'rz', 'sx', 'sy', 'x', 'y', 'u3'])
 
     # hopping term 2
     hop_2_circ = QuantumCircuit(9, 9)
@@ -503,6 +503,6 @@ def create_energy_estimation_circuits(ansatz_circ):
         hop_2_circ = add_transform_to_XX_YY_basis(hop_2_circ, qubit_pair[0], qubit_pair[1])
     hop_2_circ.measure(4, 4)
     hop_2_circ.measure_all(add_bits=False)
-    hop_2_circ = transpile(hop_2_circ, basis_gates=['pswap', 'cp', 'rz', 'sx', 'sy', 'x', 'y'])
+    hop_2_circ = transpile(hop_2_circ, basis_gates=['pswap', 'cp', 'rz', 'sx', 'sy', 'x', 'y', 'u3'])
 
     return onsite_circ, hop_1_circ, hop_2_circ
