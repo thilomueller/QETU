@@ -6,7 +6,7 @@ import functools as ft
 from qetu_sim import *
 
 class TestEnergyEstimation(unittest.TestCase):
-    def expectation_value_decomposition(self):
+    def test_expectation_value_decomposition(self):
         """
         Tests if the decomposition of the ground state energy into its energy components is correct, e.g.
         tests if the ground state energy can be reconstructed by the single energy components.
@@ -20,7 +20,7 @@ class TestEnergyEstimation(unittest.TestCase):
 
         # test values
         u = 1
-        t = t
+        t = 1
     
         # reference values
         H_ref = ref_fh_hamiltonian(u=u, t=t, WMI_qubit_layout=True, include_aux=True)
@@ -164,9 +164,11 @@ class TestEnergyEstimation(unittest.TestCase):
             expectation_value_hop_parity += -1 * Pr_10
             expectation_value_hop_parity += 1 * Pr_11
 
-        E0_recon = 0.25*u*expectation_value_onsite - 2*t*(expectation_value_hop_1 + expectation_value_hop_2)
+        E0_recon = 0.25*u*expectation_value_onsite + 0.5*t*(expectation_value_hop_1 + expectation_value_hop_2)
 
-        self.assertAlmostEqual(E0_recon, E0)
+        print(E0_recon)
+        print(ground_state_energy)
+        self.assertAlmostEqual(E0_recon, ground_state_energy)
 
 if __name__ == "__main__":
     unittest.main()

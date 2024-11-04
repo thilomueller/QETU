@@ -190,7 +190,7 @@ def estimate_ground_state_energy(prepared_state, u=1, t=1, num_shots=1_000, nois
             probability = calculate_propability(counts_hop_pairty, qubit_pair[0], qubit_pair[1], probe[0], probe[1], use_num_conservation)
             expectation_value_hop_parity += (-1)**probe[0] * (-1)**probe[1] * probability
     
-    E0_meas = 0.25*u*expectation_value_onsite -2*t*(expectation_value_hop_1 + expectation_value_hop_2)
+    E0_meas = 0.25*u*expectation_value_onsite +0.5*t*(expectation_value_hop_1 + expectation_value_hop_2)
     return E0_meas
 
 def estimate_ground_state_energy_from_statevector_list(prepared_states, u=1, t=1, noise_model=None, use_num_conservation=False):
@@ -314,7 +314,7 @@ def estimate_ground_state_energy_from_statevector_list(prepared_states, u=1, t=1
         expectation_value_hop_2 += -2*probability_10
         expectation_value_hop_2 += 0*probability_11
     
-    E0_meas = 0.25*u*expectation_value_onsite -2*t*(expectation_value_hop_1 + expectation_value_hop_2)
+    E0_meas = 0.25*u*expectation_value_onsite +0.5*t*(expectation_value_hop_1 + expectation_value_hop_2)
     return E0_meas
 
 
@@ -391,7 +391,7 @@ def estimate_ground_state_energy_from_circ(onsite_circ, hop_1_circ, hop_2_circ, 
         expectation_value_hop_2 += -2*probability_10
         expectation_value_hop_2 += 0*probability_11
 
-    E0_meas = 0.25*u*expectation_value_onsite -2*t*(expectation_value_hop_1 + expectation_value_hop_2)
+    E0_meas = 0.25*u*expectation_value_onsite -0.5*t*(expectation_value_hop_1 + expectation_value_hop_2)
     return E0_meas
 
 class QobjEncoder(json.JSONEncoder):
