@@ -128,7 +128,7 @@ def ref_fh_hamiltonian(u=2, t=1, WMI_qubit_layout=False, include_aux=False):
     H1 = H_1(onsite_pairs, include_aux)
     H2 = H_2(hopping_pairs_1, include_aux)
     H3 = H_3(hopping_pairs_2, include_aux)
-    H = 0.25*u*H1 - 2*t*(H2 + H3)
+    H = 0.25*u*H1 - 0.5*t*(H2 + H3)
     return H
 
 def ref_fh_op(u=2, t=1, delta_t=1, WMI_qubit_layout=False):
@@ -160,5 +160,5 @@ def ref_fh_op(u=2, t=1, delta_t=1, WMI_qubit_layout=False):
     H1 = H_1(onsite_pairs, False)
     H2 = H_2(hopping_pairs_1, False)
     H3 = H_3(hopping_pairs_2, False)
-    U = sp.linalg.expm(-1j*0.25*u*H1 -1j*-2*t*(H2 + H3))
+    U = sp.linalg.expm(-1j*0.25*u*H1 -1j*-0.5*t*(H2 + H3))
     return U

@@ -49,7 +49,7 @@ def add_trotter_steps(trotter_circuit, spin_up, spin_down, aux=None, num_sites=4
         #############
         # H_2
         ############
-        theta = 4*t*delta_t/n
+        theta = 1*t*delta_t/n
         eta = 0
         hoppings = [(spin_up[0], spin_up[2]), (spin_up[1], spin_up[3]), (spin_down[0], spin_down[1]), (spin_down[2], spin_down[3])]
         for hop in hoppings:
@@ -66,7 +66,7 @@ def add_trotter_steps(trotter_circuit, spin_up, spin_down, aux=None, num_sites=4
 
         #trotter_circuit.barrier(aux, spin_up, spin_down)
 
-        theta = 8*t*delta_t/n
+        theta = 2*t*delta_t/n
         eta = 0
         hoppings = [(spin_up[0], spin_up[2]), (spin_up[1], spin_up[3]), (spin_down[0], spin_down[1]), (spin_down[2], spin_down[3])]
         for hop in hoppings:
