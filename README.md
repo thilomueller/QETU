@@ -1,4 +1,4 @@
-# QETU
+# Ground-state preparation of the 2x2 Fermi-Hubbard model via QETU
 
 ![Tests](https://github.com/thilomueller/QETU/actions/workflows/ci.yml/badge.svg)
 
