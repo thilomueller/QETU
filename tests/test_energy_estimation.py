@@ -3,7 +3,9 @@ import unittest
 from qiskit import *
 import functools as ft
 
-from qetu_sim import *
+from qetu_sim.util import *
+from qetu_sim.fh_2x2_sim import *
+from qetu_sim.energy_estimation import *
 
 class TestEnergyEstimation(unittest.TestCase):
     def test_expectation_value_decomposition(self):
