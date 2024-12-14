@@ -21,6 +21,15 @@ jobs:
 
       - name: Install MATLAB
         uses: matlab-actions/setup-matlab@v2
+        with:
+          release: R2023b
+        
+      - name: Install Matlab-Engine
+        run: |
+          cd "/opt/hostedtoolcache/MATLAB/"
+          ls
+          cd "/opt/hostedtoolcache/MATLAB/2024.1.999/x64/extern/engines/python"
+          python3 setup.py install
 
       - name: Install dependencies
         run: |
