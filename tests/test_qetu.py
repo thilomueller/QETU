@@ -4,7 +4,6 @@ from qiskit import *
 
 from qetu_sim.util import *
 from qetu_sim.fh_2x2_sim import *
-from qetu_sim.qsp_phase_matlab import *
 
 class TestQETU(unittest.TestCase):
     def test_ground_state_preparation(self):
