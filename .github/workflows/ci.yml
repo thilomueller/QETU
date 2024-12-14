@@ -19,14 +19,6 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install MATLAB
-        uses: matlab-actions/setup-matlab@v2
-        
-      - name: Install Matlab-Engine
-        run: |
-          cd "/opt/hostedtoolcache/MATLAB/2024.1.999/x64/extern/engines/python"
-          python3 setup.py install
-
       - name: Install dependencies
         run: |
           python3 -m pip install --upgrade pip
